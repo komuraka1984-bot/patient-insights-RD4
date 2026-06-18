@@ -15,6 +15,7 @@ APP_TITLE = "Shirabeo Labs | Patient Insight"
 
 CSV_PATH_ADCT = Path("data/rd_adct_responses.csv")
 CSV_PATH_DLQI = Path("data/rd_dlqi_responses.csv")
+CSV_PATH_UCT = Path("data/rd_uct_responses.csv")
 
 ADMIN_EMAIL = "komura@shirabeo.com"
 CONTACT_EMAIL = "contact@shirabeo.com"
@@ -134,6 +135,34 @@ ADCT_OPTIONS_EN = [
     {"Not at all": 0, "A little": 1, "Moderately": 2, "Very much": 3, "Extremely": 4},
 ]
 
+UCT_QUESTIONS_JA = [
+    "この4週間に、じんましんによる症状（痒み、膨疹、腫れ）がどのくらいありましたか。",
+    "この4週間に、じんましんによってあなたの生活の質はどのくらい損なわれましたか。",
+    "この4週間に、じんましんの治療があなたの症状を抑えるのに十分でなかったことがどのくらいありましたか。",
+    "全体として、この4週間にあなたのじんましんはどのくらい良い状態に保たれていましたか。",
+]
+
+UCT_QUESTIONS_EN = [
+    "Over the last 4 weeks, how much have you had urticaria symptoms such as itching, wheals, or swelling?",
+    "Over the last 4 weeks, how much was your quality of life impaired by urticaria?",
+    "Over the last 4 weeks, how often was the treatment for your urticaria not enough to control your symptoms?",
+    "Overall, over the last 4 weeks, how well has your urticaria been controlled?",
+]
+
+UCT_OPTIONS_JA = [
+    {"非常に強い": 0, "強い": 1, "ある程度": 2, "わずか": 3, "全くない": 4},
+    {"非常に強い": 0, "強い": 1, "ある程度": 2, "わずか": 3, "全くない": 4},
+    {"非常に頻繁": 0, "頻繁": 1, "時々": 2, "まれに": 3, "全くない": 4},
+    {"全く保たれていなかった": 0, "わずかに保たれていた": 1, "ある程度保たれていた": 2, "良く保たれていた": 3, "完全に保たれていた": 4},
+]
+
+UCT_OPTIONS_EN = [
+    {"Very much": 0, "Much": 1, "Somewhat": 2, "A little": 3, "Not at all": 4},
+    {"Very much": 0, "Much": 1, "Somewhat": 2, "A little": 3, "Not at all": 4},
+    {"Very often": 0, "Often": 1, "Sometimes": 2, "Rarely": 3, "Not at all": 4},
+    {"Not controlled at all": 0, "A little controlled": 1, "Somewhat controlled": 2, "Well controlled": 3, "Completely controlled": 4},
+]
+
 
 def get_secret(name: str, default: str | None = None) -> str | None:
     try:
@@ -195,8 +224,41 @@ def interpret_adct(score: int, language: str) -> tuple[str, str]:
     )
 
 
+def interpret_uct(score: int, language: str) -> tuple[str, str]:
+    if score < 12:
+        return (
+            t(language, "コントロール不良の可能性", "Possible uncontrolled urticaria"),
+            t(
+                language,
+                "UCTが12点未満です。症状、生活への影響、治療状況を医療者が確認してください。",
+                "UCT is below 12. A qualified clinician should review symptoms, quality-of-life impact, and treatment status.",
+            ),
+        )
+    if score < 16:
+        return (
+            t(language, "比較的コントロール良好", "Relatively controlled"),
+            t(
+                language,
+                "UCTは12点以上です。通常診療の中で医療者が確認を継続してください。",
+                "UCT is 12 or higher. Continue routine assessment by a qualified clinician.",
+            ),
+        )
+    return (
+        t(language, "完全にコントロール良好", "Completely controlled"),
+        t(
+            language,
+            "UCTは16点です。通常診療の中で医療者が確認を継続してください。",
+            "UCT is 16. Continue routine assessment by a qualified clinician.",
+        ),
+    )
+
+
 def get_csv_path(instrument: str) -> Path:
-    return CSV_PATH_ADCT if instrument == "ADCT" else CSV_PATH_DLQI
+    if instrument == "ADCT":
+        return CSV_PATH_ADCT
+    if instrument == "UCT":
+        return CSV_PATH_UCT
+    return CSV_PATH_DLQI
 
 
 def save_result(row: dict):
@@ -419,13 +481,13 @@ def render_legal_notice(language: str):
 - 通信環境、外部サービス、サーバー、ブラウザ、端末の状態により、送信遅延、保存失敗、表示不具合が生じる可能性があります。
 
 ### 5. 表示結果について
-- ADCT、DLQIなどのスコア表示は、患者報告アウトカムを整理するための補助情報です。
+- ADCT、DLQI、UCTなどのスコア表示は、患者報告アウトカムを整理するための補助情報です。
 - 「維持」「非維持」等の表示は、入力された回答に基づく簡易的な診療補助表示であり、医学的判断そのものではありません。
 - 表示結果が「維持」であっても、症状悪化や医療者が必要と判断する場合には、追加評価や治療方針の見直しが必要になることがあります。
 - 表示結果が「非維持」であっても、直ちに治療変更や中止を意味するものではありません。医療者が診察所見、既往歴、併存症、治療歴、検査結果、患者希望等を総合して判断してください。
 
 ### 6. 質問票・スコア体系・第三者権利
-- ADCT、DLQI等の質問票、名称、設問文、翻訳、スコア体系、解釈基準には、第三者の著作権、商標権、ライセンス条件、使用条件が存在する場合があります。
+- ADCT、DLQI、UCT等の質問票、名称、設問文、翻訳、スコア体系、解釈基準には、第三者の著作権、商標権、ライセンス条件、使用条件が存在する場合があります。
 - 実運用、商用利用、外部提供、研究利用、出版物・講演資料での表示、企業・医療機関への提供にあたっては、必要な使用許諾、表示条件、ライセンス、引用条件を確認してください。
 - 本アプリ内での質問票表示は、試験運用・デモ・診療補助フロー検討のための実装であり、権利関係の最終確認を不要にするものではありません。
 - DLQIは皮膚疾患における生活の質への影響を把握するための指標として広く利用されていますが、外部提供・商用利用・出版・講演資料での利用条件は、必要に応じて確認してください。
@@ -469,13 +531,13 @@ def render_legal_notice(language: str):
 - Transmission delays, storage failures, or display errors may occur depending on network conditions, external services, servers, browsers, or devices.
 
 ### 5. Displayed results
-- ADCT, DLQI, and related scores are supportive information for organizing patient-reported outcomes.
+- ADCT, DLQI, UCT, and related scores are supportive information for organizing patient-reported outcomes.
 - Displays such as “maintenance” or “non-maintenance” are simplified clinical-support indicators based on the entered responses and are not medical judgments themselves.
 - Even if the display indicates “maintenance,” additional assessment or treatment review may be required if symptoms worsen or if the healthcare professional considers it necessary.
 - Even if the display indicates “non-maintenance,” it does not immediately mean that treatment should be changed or stopped. Healthcare professionals should make comprehensive decisions based on examination findings, medical history, comorbidities, treatment history, test results, and patient preferences.
 
 ### 6. Questionnaires, scoring systems, and third-party rights
-- ADCT, DLQI, questionnaire names, question wording, translations, scoring systems, and interpretation criteria may be subject to third-party copyrights, trademarks, licenses, or usage conditions.
+- ADCT, DLQI, UCT, questionnaire names, question wording, translations, scoring systems, and interpretation criteria may be subject to third-party copyrights, trademarks, licenses, or usage conditions.
 - Before operational, commercial, external, research, publication, presentation, or institutional use, necessary permissions, display requirements, licenses, and citation conditions should be confirmed.
 - Display of questionnaires within this application is for pilot use, demonstration, and workflow evaluation, and does not eliminate the need for rights clearance.
 - DLQI is widely used as an index for assessing the quality-of-life impact of skin diseases, but conditions for external, commercial, publication, or presentation use should be confirmed as necessary.
@@ -590,6 +652,49 @@ def render_dlqi(language: str):
     }
 
 
+def render_uct(language: str):
+    questions = UCT_QUESTIONS_JA if language == "日本語" else UCT_QUESTIONS_EN
+    options_list = UCT_OPTIONS_JA if language == "日本語" else UCT_OPTIONS_EN
+
+    scores = []
+    answers = []
+
+    st.caption(
+        t(
+            language,
+            "直近の4週間を振り返って回答してください。",
+            "Please answer based on the last 4 weeks.",
+        )
+    )
+
+    for i, q in enumerate(questions, start=1):
+        st.markdown(f"**Q{i}. {q}**")
+        opts = options_list[i - 1]
+        answer = st.radio(
+            t(language, f"Q{i}の回答", f"Answer Q{i}"),
+            list(opts.keys()),
+            key=f"uct_{language}_{i}",
+            label_visibility="collapsed",
+        )
+        scores.append(opts[answer])
+        answers.append(answer)
+        st.write("")
+
+    total = int(sum(scores))
+    severity, interpretation = interpret_uct(total, language)
+
+    return {
+        "instrument": "UCT",
+        "disease": "Urticaria",
+        "total_score": total,
+        "max_score": 16,
+        "severity": severity,
+        "interpretation": interpretation,
+        "scores": scores,
+        "answers": answers,
+    }
+
+
 def render_adct(language: str):
     questions = ADCT_QUESTIONS_JA if language == "日本語" else ADCT_QUESTIONS_EN
     options_list = ADCT_OPTIONS_JA if language == "日本語" else ADCT_OPTIONS_EN
@@ -684,6 +789,13 @@ def clinician_priority_label(row: pd.Series, instrument_label: str) -> tuple[str
             return "確認優先", "🔴"
         return "通常確認", "🟢"
 
+    if instrument_label == "UCT":
+        if total_score < 12:
+            return "確認優先", "🔴"
+        if total_score == 16:
+            return "完全コントロール", "🟢"
+        return "通常確認", "🟢"
+
     # DLQIは診断・治療判断ではなく、生活影響の大きさを見落とさないための表示用。
     if total_score >= 21:
         return "生活影響：極めて大", "🔴"
@@ -774,7 +886,7 @@ def render_clinician_submission_card(row: pd.Series, instrument_label: str, inde
     decision_reasons = format_clinician_value(row.get("decision_reasons", ""))
 
     is_priority = priority_text != "通常確認"
-    if instrument_label == "ADCT":
+    if instrument_label in ["ADCT", "UCT"]:
         card_class = "clinician-card-priority" if is_priority else "clinician-card-normal"
     else:
         card_class = "clinician-card-impact-high" if is_priority else "clinician-card-normal"
@@ -808,6 +920,17 @@ def render_clinician_submission_card(row: pd.Series, instrument_label: str, inde
             st.success("非維持条件には該当していません。通常診療の中で確認してください。")
         else:
             st.info("ADCTの結果を通常診療の中で確認してください。")
+    elif instrument_label == "UCT":
+        if severity:
+            st.info(f"UCT解釈：{severity}")
+        if total_score:
+            try:
+                if int(float(total_score)) < 12:
+                    st.error("UCTが12点未満です。症状、生活への影響、治療状況を確認してください。")
+                else:
+                    st.success("UCTは12点以上です。通常診療の中で確認してください。")
+            except Exception:
+                pass
     else:
         if severity:
             st.info(f"DLQI解釈：{severity}")
@@ -1045,7 +1168,7 @@ def main():
     st.set_page_config(page_title=APP_TITLE, page_icon="📝", layout="centered")
 
     st.title(APP_TITLE)
-    st.caption("DLQI for psoriasis / ADCT for atopic dermatitis")
+    st.caption("DLQI for psoriasis / ADCT for atopic dermatitis / UCT for urticaria")
     st.caption(APP_VERSION)
 
     language = st.sidebar.radio("Language / 言語", ["日本語", "English"], index=0)
@@ -1057,6 +1180,8 @@ def main():
 
     if disease_param in ["psoriasis", "ps", "dlqi"]:
         default_index = 0
+    elif disease_param in ["urticaria", "uc", "uct"]:
+        default_index = 2
     else:
         default_index = 1
 
@@ -1065,6 +1190,7 @@ def main():
         [
             t(language, "乾癬：DLQI", "Psoriasis: DLQI"),
             t(language, "アトピー性皮膚炎：ADCT", "Atopic dermatitis: ADCT"),
+            t(language, "じんましん：UCT", "Urticaria: UCT"),
         ],
         index=default_index,
     )
@@ -1072,8 +1198,8 @@ def main():
     st.info(
         t(
             language,
-            "過去1週間を振り返って回答してください。氏名・生年月日・住所・患者ID・診察券番号などの直接個人情報は入力しないでください。",
-            "Please answer based on the last 7 days. Do not enter direct personal identifiers such as name, date of birth, address, patient ID, or medical record number.",
+            "選択された質問票の指定期間を振り返って回答してください。氏名・生年月日・住所・患者ID・診察券番号などの直接個人情報は入力しないでください。",
+            "Please answer based on the recall period specified by the selected questionnaire. Do not enter direct personal identifiers such as name, date of birth, address, patient ID, or medical record number.",
         )
     )
 
@@ -1085,23 +1211,28 @@ def main():
         st.session_state["questionnaire_timer_disease_mode"] = disease_mode
 
     is_adct_selected = "ADCT" in disease_mode
+    is_uct_selected = "UCT" in disease_mode
     visit_code_digits = ""
 
     with st.form("questionnaire_form", clear_on_submit=False):
-        if is_adct_selected:
+        if is_adct_selected or is_uct_selected:
+            code_prefix = "AD" if is_adct_selected else "UC"
+            disease_name_ja = "アトピー性皮膚炎" if is_adct_selected else "じんましん"
+            disease_name_en = "atopic dermatitis" if is_adct_selected else "urticaria"
+
             visit_code_digits = st.text_input(
-                t(language, "匿名コード（AD + 半角数字3桁）", "Anonymous code (AD + 3 digits)"),
+                t(language, f"匿名コード（{code_prefix} + 半角数字3桁）", f"Anonymous code ({code_prefix} + 3 digits)"),
                 max_chars=3,
                 placeholder=t(language, "例：001", "Example: 001"),
                 help=t(
                     language,
-                    "アトピー性皮膚炎では、患者さんは半角数字3桁のみを入力してください。アプリ側で自動的に AD001 のような匿名コードとして保存します。氏名、患者ID、診察券番号は入力しないでください。",
-                    "For atopic dermatitis, enter 3 half-width digits only. The app will automatically save it as an anonymous code such as AD001. Do not enter name, patient ID, or medical record number.",
+                    f"{disease_name_ja}では、患者さんは半角数字3桁のみを入力してください。アプリ側で自動的に {code_prefix}001 のような匿名コードとして保存します。氏名、患者ID、診察券番号は入力しないでください。",
+                    f"For {disease_name_en}, enter 3 half-width digits only. The app will automatically save it as an anonymous code such as {code_prefix}001. Do not enter name, patient ID, or medical record number.",
                 ),
             )
 
             if visit_code_digits and re.fullmatch(r"[0-9]{3}", visit_code_digits):
-                visit_code = f"AD{visit_code_digits}"
+                visit_code = f"{code_prefix}{visit_code_digits}"
                 st.caption(t(language, f"保存される匿名コード：{visit_code}", f"Anonymous code to be saved: {visit_code}"))
             elif visit_code_digits:
                 visit_code = ""
@@ -1124,6 +1255,8 @@ def main():
 
         if "DLQI" in disease_mode:
             result = render_dlqi(language)
+        elif "UCT" in disease_mode:
+            result = render_uct(language)
         else:
             result = render_adct(language)
 
@@ -1163,17 +1296,18 @@ def main():
             )
             st.stop()
 
-        if result["instrument"] == "ADCT":
+        if result["instrument"] in ["ADCT", "UCT"]:
             if not re.fullmatch(r"[0-9]{3}", visit_code_digits or ""):
                 st.error(
                     t(
                         language,
-                        "アトピー性皮膚炎の匿名コードは、半角数字3桁のみで入力してください。例：001",
-                        "For atopic dermatitis, please enter exactly 3 half-width digits. Example: 001",
+                        "匿名コードは、半角数字3桁のみで入力してください。例：001",
+                        "Please enter exactly 3 half-width digits. Example: 001",
                     )
                 )
                 st.stop()
-            visit_code = f"AD{visit_code_digits}"
+
+            visit_code = ("AD" if result["instrument"] == "ADCT" else "UC") + visit_code_digits
 
         now_dt = datetime.now(JST)
         now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -1320,6 +1454,42 @@ def main():
                     "The maintenance / non-maintenance display is a simplified clinical-support indicator based on ADCT responses and does not automatically determine whether treatment should be continued, changed, or stopped.",
                 )
             )
+        elif result["instrument"] == "UCT":
+            st.subheader(result["severity"])
+            st.write(result["interpretation"])
+
+            if result["total_score"] < 12:
+                st.error(
+                    t(
+                        language,
+                        "UCTが12点未満です。じんましんのコントロールが不十分な可能性があります。医療者が症状、生活への影響、治療状況を確認してください。",
+                        "UCT is below 12. Urticaria may be insufficiently controlled. A qualified clinician should review symptoms, quality-of-life impact, and treatment status.",
+                    )
+                )
+            elif result["total_score"] == 16:
+                st.success(
+                    t(
+                        language,
+                        "UCTは16点です。じんましんは完全にコントロールされている可能性があります。",
+                        "UCT is 16. Urticaria may be completely controlled.",
+                    )
+                )
+            else:
+                st.success(
+                    t(
+                        language,
+                        "UCTは12点以上です。比較的コントロール良好と考えられます。",
+                        "UCT is 12 or higher. Urticaria appears relatively controlled.",
+                    )
+                )
+
+            st.caption(
+                t(
+                    language,
+                    "UCTの結果はじんましんのコントロール状態を把握するための参考情報です。診療判断は医療者が総合的に行ってください。",
+                    "The UCT result is reference information for understanding urticaria control. Clinical decisions should be made comprehensively by a qualified healthcare professional.",
+                )
+            )
         else:
             st.subheader(result["severity"])
             st.write(result["interpretation"])
@@ -1362,13 +1532,16 @@ def main():
                     )
                 )
             elif admin_password == configured_password:
-                tab_adct, tab_dlqi = st.tabs(["ADCT", "DLQI"])
+                tab_adct, tab_dlqi, tab_uct = st.tabs(["ADCT", "DLQI", "UCT"])
 
                 with tab_adct:
                     show_csv_tab("ADCT", CSV_PATH_ADCT, "adct_results.csv")
 
                 with tab_dlqi:
                     show_csv_tab("DLQI", CSV_PATH_DLQI, "dlqi_results.csv")
+
+                with tab_uct:
+                    show_csv_tab("UCT", CSV_PATH_UCT, "uct_results.csv")
 
             elif admin_password:
                 st.error(t(language, "パスワードが違います。", "Incorrect password."))
