@@ -1215,10 +1215,19 @@ def main():
     visit_code_digits = ""
 
     with st.form("questionnaire_form", clear_on_submit=False):
-        if is_adct_selected or is_uct_selected:
-            code_prefix = "AD" if is_adct_selected else "UC"
-            disease_name_ja = "アトピー性皮膚炎" if is_adct_selected else "じんましん"
-            disease_name_en = "atopic dermatitis" if is_adct_selected else "urticaria"
+        if is_adct_selected or is_uct_selected or "DLQI" in disease_mode:
+            if is_adct_selected:
+    code_prefix = "AD"
+    disease_name_ja = "アトピー性皮膚炎"
+    disease_name_en = "atopic dermatitis"
+elif is_uct_selected:
+    code_prefix = "UC"
+    disease_name_ja = "じんましん"
+    disease_name_en = "urticaria"
+else:
+    code_prefix = "PS"
+    disease_name_ja = "乾癬"
+    disease_name_en = "psoriasis"
 
             visit_code_digits = st.text_input(
                 t(language, f"匿名コード（{code_prefix} + 半角数字3桁）", f"Anonymous code ({code_prefix} + 3 digits)"),
@@ -1240,16 +1249,7 @@ def main():
             else:
                 visit_code = ""
                 st.caption(t(language, "受付で案内された半角数字3桁を入力してください。", "Please enter the 3-digit number provided by the clinic."))
-        else:
-            visit_code = st.text_input(
-                t(language, "匿名コード", "Anonymous visit code"),
-                placeholder=t(language, "例：PS001。空欄でも可。", "Example: PS001. Optional."),
-                help=t(
-                    language,
-                    "匿名コードのみ使用してください。氏名、患者ID、診察券番号は入力しないでください。",
-                    "Use an anonymous code only. Do not enter name, patient ID, or medical record number.",
-                ),
-            )
+
 
         st.divider()
 
@@ -1296,7 +1296,7 @@ def main():
             )
             st.stop()
 
-        if result["instrument"] in ["ADCT", "UCT"]:
+        if result["instrument"] in ["ADCT", "UCT", "DLQI"]:
             if not re.fullmatch(r"[0-9]{3}", visit_code_digits or ""):
                 st.error(
                     t(
@@ -1307,7 +1307,12 @@ def main():
                 )
                 st.stop()
 
-            visit_code = ("AD" if result["instrument"] == "ADCT" else "UC") + visit_code_digits
+            prefix_map = {
+    "ADCT": "AD",
+    "DLQI": "PS",
+    "UCT": "UC",
+}
+visit_code = prefix_map[result["instrument"]] + visit_code_digits
 
         now_dt = datetime.now(JST)
         now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
