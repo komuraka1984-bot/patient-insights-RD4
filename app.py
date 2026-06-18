@@ -135,6 +135,7 @@ ADCT_OPTIONS_EN = [
     {"Not at all": 0, "A little": 1, "Moderately": 2, "Very much": 3, "Extremely": 4},
 ]
 
+
 UCT_QUESTIONS_JA = [
     "この4週間に、じんましんによる症状（痒み、膨疹、腫れ）がどのくらいありましたか。",
     "この4週間に、じんましんによってあなたの生活の質はどのくらい損なわれましたか。",
@@ -294,20 +295,6 @@ def get_previous_adct(patient_code: str):
 
 
 def judge_adct_control(current: int, previous: int | None, scores: list[int], language: str) -> dict:
-    """
-    ADCTスライドに基づくコントロール判定。
-
-    非コントロール／非維持の条件：
-    1. ADCT総スコアが7点以上
-    2. Q1, Q2, Q3, Q5, Q6 のいずれかが2点以上
-    3. Q4が1点以上
-    4. 前回から5点以上増加
-
-    注意：
-    - この判定は診療補助・確認促進のための表示です。
-    - 診断、治療方針、薬剤選択、治療継続・中止を自動決定するものではありません。
-    """
-
     reasons_ja = []
     reasons_en = []
 
@@ -315,20 +302,16 @@ def judge_adct_control(current: int, previous: int | None, scores: list[int], la
         reasons_ja.append("ADCT総スコアが7点以上")
         reasons_en.append("ADCT total score is 7 or higher")
 
-    # スライド上の青色領域：
-    # Q1, Q2, Q3, Q5, Q6 は2点以上
     blue_threshold_items = [0, 1, 2, 4, 5]
     for i in blue_threshold_items:
         if len(scores) > i and scores[i] >= 2:
             reasons_ja.append(f"Q{i + 1}が2点以上")
             reasons_en.append(f"Q{i + 1} score is 2 or higher")
 
-    # Q4だけは1点以上
     if len(scores) > 3 and scores[3] >= 1:
         reasons_ja.append("Q4が1点以上")
         reasons_en.append("Q4 score is 1 or higher")
 
-    # 前回から5点以上増加
     if previous is not None and (current - previous) >= 5:
         reasons_ja.append("前回から5点以上増加")
         reasons_en.append("Increase of 5 points or more from previous ADCT")
@@ -465,49 +448,26 @@ def render_legal_notice(language: str):
 ### 2. 利用対象
 - 本アプリは、医療機関または医療者の管理下で、皮膚科診療の補助として使用されることを想定しています。
 - 患者さんが単独で診断や治療判断を行う目的で使用するものではありません。
-- 強い症状、急な悪化、感染が疑われる症状、発熱、全身症状、その他緊急性が疑われる場合は、本アプリの結果にかかわらず、速やかに医療者へ相談してください。
 
 ### 3. 入力してはいけない情報
 - 氏名、生年月日、住所、電話番号、メールアドレス、患者ID、診察券番号、保険証番号、マイナンバーなど、個人を直接特定できる情報は入力しないでください。
 - 匿名コードを使用する場合は、医療機関内で適切に管理された非識別コードを使用してください。
-- 自由記載欄や匿名コード欄に、個人を特定できる内容を入力しないでください。
-- 入力内容に直接個人情報が含まれた場合、Shirabeo Labsはその内容を意図して取得するものではありません。
+- 匿名コード欄や自由記載欄に、個人を特定できる内容を入力しないでください。
 
 ### 4. データの取扱い
 - 入力された回答、スコア、匿名コード、送信日時、選択された疾患・質問票の種類などは、診療補助、試験運用、動作確認、品質改善、集計確認の目的で保存・確認される場合があります。
-- 本アプリでは、氏名等の直接個人情報を入力しない運用を前提としています。
 - 医療機関が匿名コードと患者情報を対応させる場合、その対応表は医療機関側で適切に管理してください。
-- 本アプリで取得されたデータを研究、発表、外部報告等に使用する場合は、必要に応じて倫理審査、施設承認、匿名化処理、同意取得等の手続きを別途行います。
-- 通信環境、外部サービス、サーバー、ブラウザ、端末の状態により、送信遅延、保存失敗、表示不具合が生じる可能性があります。
 
-### 5. 表示結果について
-- ADCT、DLQI、UCTなどのスコア表示は、患者報告アウトカムを整理するための補助情報です。
-- 「維持」「非維持」等の表示は、入力された回答に基づく簡易的な診療補助表示であり、医学的判断そのものではありません。
-- 表示結果が「維持」であっても、症状悪化や医療者が必要と判断する場合には、追加評価や治療方針の見直しが必要になることがあります。
-- 表示結果が「非維持」であっても、直ちに治療変更や中止を意味するものではありません。医療者が診察所見、既往歴、併存症、治療歴、検査結果、患者希望等を総合して判断してください。
-
-### 6. 質問票・スコア体系・第三者権利
+### 5. 質問票・第三者権利
 - ADCT、DLQI、UCT等の質問票、名称、設問文、翻訳、スコア体系、解釈基準には、第三者の著作権、商標権、ライセンス条件、使用条件が存在する場合があります。
 - 実運用、商用利用、外部提供、研究利用、出版物・講演資料での表示、企業・医療機関への提供にあたっては、必要な使用許諾、表示条件、ライセンス、引用条件を確認してください。
-- 本アプリ内での質問票表示は、試験運用・デモ・診療補助フロー検討のための実装であり、権利関係の最終確認を不要にするものではありません。
-- DLQIは皮膚疾患における生活の質への影響を把握するための指標として広く利用されていますが、外部提供・商用利用・出版・講演資料での利用条件は、必要に応じて確認してください。
 
-### 7. 医療機器・薬機法上の位置づけ
-- 本アプリは、現時点では診断、治療、予防を単独で目的とするものではなく、医療者の確認を補助する情報整理ツールとして設計されています。
-- 本アプリは、医療機器としての承認、認証、届出を受けたプログラムではありません。
-- 将来的に、診断、治療方針決定、薬剤選択、治療継続・中止判断等に直接関与する機能を追加する場合には、医療機器プログラム該当性、薬機法、関連ガイドライン、広告規制等について専門家確認を行う必要があります。
-
-### 8. 免責
-- 本アプリの利用により得られる情報の正確性、完全性、最新性、有用性について、Shirabeo Labsは可能な範囲で注意を払いますが、すべてを保証するものではありません。
-- 本アプリの表示結果のみに基づく診断、治療変更、治療中止、受診延期、自己判断について、Shirabeo Labsは責任を負いません。
-- 本アプリは、医療者と患者さんのコミュニケーションを補助するものであり、医療者による診療行為を代替するものではありません。
-
-### 9. お問い合わせ
+### 6. お問い合わせ
 - 本アプリに関するお問い合わせ：{CONTACT_EMAIL}
                 """,
                 f"""
 ### 1. Positioning of this application
-- This application is a pilot / demonstration tool intended to support the input, scoring, and longitudinal review of patient-reported outcomes (PROs) in dermatology practice.
+- This application is a pilot / demonstration tool intended to support the input, scoring, and longitudinal review of patient-reported outcomes in dermatology practice.
 - It does not replace medical interviews, physical examination, tests, or review of medical records by healthcare professionals.
 - The displayed results are reference information to support review by healthcare professionals and must not be used alone to diagnose disease, determine severity, select medications, or decide whether treatment should be continued, changed, or stopped.
 - This application is currently a workflow-support tool for research, pilot use, and clinical support. It has not been approved, certified, or registered as a medical device.
@@ -515,56 +475,28 @@ def render_legal_notice(language: str):
 ### 2. Intended users and use setting
 - This application is intended to be used as a dermatology workflow-support tool under the management of a medical institution or healthcare professional.
 - It is not intended for patients to independently diagnose disease or make treatment decisions.
-- In case of severe symptoms, sudden worsening, suspected infection, fever, systemic symptoms, or any condition that may require urgent care, please consult a healthcare professional promptly regardless of the app result.
 
 ### 3. Information not to enter
 - Do not enter directly identifiable information such as name, date of birth, address, phone number, email address, patient ID, medical record number, insurance number, or government identification number.
 - If an anonymous code is used, it should be a non-identifying code appropriately managed within the medical institution.
 - Do not enter any personally identifiable content in the anonymous code field or any free-text field.
-- If directly identifiable information is entered, Shirabeo Labs does not intend to collect such information.
 
 ### 4. Handling of data
 - Responses, scores, anonymous codes, submission time, selected disease, and questionnaire type may be stored and reviewed for clinical support, pilot operation, technical verification, quality improvement, and aggregate review.
-- This application is operated on the assumption that directly identifiable information is not entered.
 - If a medical institution links anonymous codes with patient identities, the correspondence table should be managed appropriately by the medical institution.
-- If data obtained through this application are used for research, presentation, publication, or external reporting, necessary procedures such as ethics review, institutional approval, anonymization, and consent will be handled separately as appropriate.
-- Transmission delays, storage failures, or display errors may occur depending on network conditions, external services, servers, browsers, or devices.
 
-### 5. Displayed results
-- ADCT, DLQI, UCT, and related scores are supportive information for organizing patient-reported outcomes.
-- Displays such as “maintenance” or “non-maintenance” are simplified clinical-support indicators based on the entered responses and are not medical judgments themselves.
-- Even if the display indicates “maintenance,” additional assessment or treatment review may be required if symptoms worsen or if the healthcare professional considers it necessary.
-- Even if the display indicates “non-maintenance,” it does not immediately mean that treatment should be changed or stopped. Healthcare professionals should make comprehensive decisions based on examination findings, medical history, comorbidities, treatment history, test results, and patient preferences.
-
-### 6. Questionnaires, scoring systems, and third-party rights
+### 5. Questionnaires and third-party rights
 - ADCT, DLQI, UCT, questionnaire names, question wording, translations, scoring systems, and interpretation criteria may be subject to third-party copyrights, trademarks, licenses, or usage conditions.
 - Before operational, commercial, external, research, publication, presentation, or institutional use, necessary permissions, display requirements, licenses, and citation conditions should be confirmed.
-- Display of questionnaires within this application is for pilot use, demonstration, and workflow evaluation, and does not eliminate the need for rights clearance.
-- DLQI is widely used as an index for assessing the quality-of-life impact of skin diseases, but conditions for external, commercial, publication, or presentation use should be confirmed as necessary.
 
-### 7. Medical device and regulatory positioning
-- This application is currently designed as an information-organization tool to support healthcare professional review and is not intended to independently diagnose, treat, or prevent disease.
-- This application has not been approved, certified, or registered as a medical device.
-- If future functions directly affect diagnosis, treatment planning, medication selection, or treatment continuation/discontinuation decisions, medical-device software applicability, pharmaceutical and medical device regulations, related guidelines, and advertising regulations should be reviewed with appropriate experts.
-
-### 8. Disclaimer
-- Shirabeo Labs takes reasonable care regarding the information provided by this application, but does not guarantee its accuracy, completeness, timeliness, or usefulness in every case.
-- Shirabeo Labs is not responsible for diagnosis, treatment changes, treatment discontinuation, delayed consultation, or self-directed decisions made solely based on the displayed results.
-- This application is intended to support communication between patients and healthcare professionals and does not replace medical care provided by healthcare professionals.
-
-### 9. Contact
+### 6. Contact
 - Contact regarding this application: {CONTACT_EMAIL}
                 """,
             )
         )
 
 
-
 def render_research_consent_notice(language: str):
-    """
-    IRB研究用のアプリ内説明・同意確認ブロック。
-    送信ボタン直前に表示し、チェックがない場合は送信しない。
-    """
     st.markdown("---")
     st.markdown(
         t(
@@ -583,10 +515,11 @@ def render_research_consent_notice(language: str):
     st.caption(
         t(
             language,
-            "診療内容は担当医が通常診療として判断し、本アプリが診断・治療方針を自動決定するものではありません。研究参加は任意であり、同意しない場合でも診療上の不利益はありません。同意されない場合は、通常診療の範囲で紙または口頭による確認を行います。",
-            "Clinical care will be determined by the treating clinician as part of routine practice. This application does not automatically determine diagnosis or treatment policy. Research participation is voluntary, and refusal to participate will not result in any disadvantage in clinical care. If you do not agree, confirmation will be performed by paper form or verbally as part of routine care.",
+            "診療内容は担当医が通常診療として判断し、本アプリが診断・治療方針を自動決定するものではありません。研究参加は任意であり、同意しない場合でも診療上の不利益はありません。",
+            "Clinical care will be determined by the treating clinician as part of routine practice. This application does not automatically determine diagnosis or treatment policy. Research participation is voluntary, and refusal to participate will not result in any disadvantage in clinical care.",
         )
     )
+
 
 def render_credit_footer(language: str):
     st.markdown("---")
@@ -774,10 +707,6 @@ def render_adct(language: str):
 
 
 def clinician_priority_label(row: pd.Series, instrument_label: str) -> tuple[str, str]:
-    """
-    医療者確認画面だけで使う表示用ラベル。
-    CSVの保存形式や患者入力ロジックには影響しません。
-    """
     decision = str(row.get("decision", "") or "")
     try:
         total_score = int(float(row.get("total_score", 0)))
@@ -796,7 +725,6 @@ def clinician_priority_label(row: pd.Series, instrument_label: str) -> tuple[str
             return "完全コントロール", "🟢"
         return "通常確認", "🟢"
 
-    # DLQIは診断・治療判断ではなく、生活影響の大きさを見落とさないための表示用。
     if total_score >= 21:
         return "生活影響：極めて大", "🔴"
     if total_score >= 11:
@@ -813,10 +741,6 @@ def format_clinician_value(value) -> str:
 
 
 def inject_clinician_ui_css():
-    """
-    医療者確認画面の見た目だけを整えるCSS。
-    患者入力、CSV保存形式、判定ロジックには影響しません。
-    """
     st.markdown(
         """
         <style>
@@ -1164,6 +1088,14 @@ def show_csv_tab(label: str, csv_path: Path, file_name: str):
     )
 
 
+def get_code_prefix_and_disease_name(disease_mode: str, language: str):
+    if "ADCT" in disease_mode:
+        return "AD", "アトピー性皮膚炎", "atopic dermatitis"
+    if "UCT" in disease_mode:
+        return "UC", "じんましん", "urticaria"
+    return "PS", "乾癬", "psoriasis"
+
+
 def main():
     st.set_page_config(page_title=APP_TITLE, page_icon="📝", layout="centered")
 
@@ -1210,46 +1142,54 @@ def main():
         st.session_state["questionnaire_started_at"] = datetime.now(JST).isoformat()
         st.session_state["questionnaire_timer_disease_mode"] = disease_mode
 
-    is_adct_selected = "ADCT" in disease_mode
-    is_uct_selected = "UCT" in disease_mode
     visit_code_digits = ""
+    visit_code = ""
 
     with st.form("questionnaire_form", clear_on_submit=False):
-        if is_adct_selected or is_uct_selected or "DLQI" in disease_mode:
-            if is_adct_selected:
-    code_prefix = "AD"
-    disease_name_ja = "アトピー性皮膚炎"
-    disease_name_en = "atopic dermatitis"
-elif is_uct_selected:
-    code_prefix = "UC"
-    disease_name_ja = "じんましん"
-    disease_name_en = "urticaria"
-else:
-    code_prefix = "PS"
-    disease_name_ja = "乾癬"
-    disease_name_en = "psoriasis"
+        code_prefix, disease_name_ja, disease_name_en = get_code_prefix_and_disease_name(disease_mode, language)
 
-            visit_code_digits = st.text_input(
-                t(language, f"匿名コード（{code_prefix} + 半角数字3桁）", f"Anonymous code ({code_prefix} + 3 digits)"),
-                max_chars=3,
-                placeholder=t(language, "例：001", "Example: 001"),
-                help=t(
+        visit_code_digits = st.text_input(
+            t(
+                language,
+                f"匿名コード（{code_prefix} + 半角数字3桁）",
+                f"Anonymous code ({code_prefix} + 3 digits)",
+            ),
+            max_chars=3,
+            placeholder=t(language, "例：001", "Example: 001"),
+            help=t(
+                language,
+                f"{disease_name_ja}では、患者さんは半角数字3桁のみを入力してください。アプリ側で自動的に {code_prefix}001 のような匿名コードとして保存します。氏名、患者ID、診察券番号は入力しないでください。",
+                f"For {disease_name_en}, enter 3 half-width digits only. The app will automatically save it as an anonymous code such as {code_prefix}001. Do not enter name, patient ID, or medical record number.",
+            ),
+        )
+
+        if visit_code_digits and re.fullmatch(r"[0-9]{3}", visit_code_digits):
+            visit_code = f"{code_prefix}{visit_code_digits}"
+            st.caption(
+                t(
                     language,
-                    f"{disease_name_ja}では、患者さんは半角数字3桁のみを入力してください。アプリ側で自動的に {code_prefix}001 のような匿名コードとして保存します。氏名、患者ID、診察券番号は入力しないでください。",
-                    f"For {disease_name_en}, enter 3 half-width digits only. The app will automatically save it as an anonymous code such as {code_prefix}001. Do not enter name, patient ID, or medical record number.",
-                ),
+                    f"保存される匿名コード：{visit_code}",
+                    f"Anonymous code to be saved: {visit_code}",
+                )
             )
-
-            if visit_code_digits and re.fullmatch(r"[0-9]{3}", visit_code_digits):
-                visit_code = f"{code_prefix}{visit_code_digits}"
-                st.caption(t(language, f"保存される匿名コード：{visit_code}", f"Anonymous code to be saved: {visit_code}"))
-            elif visit_code_digits:
-                visit_code = ""
-                st.error(t(language, "匿名コードは半角数字3桁で入力してください。例：001", "Please enter exactly 3 half-width digits. Example: 001"))
-            else:
-                visit_code = ""
-                st.caption(t(language, "受付で案内された半角数字3桁を入力してください。", "Please enter the 3-digit number provided by the clinic."))
-
+        elif visit_code_digits:
+            visit_code = ""
+            st.error(
+                t(
+                    language,
+                    "匿名コードは半角数字3桁で入力してください。例：001",
+                    "Please enter exactly 3 half-width digits. Example: 001",
+                )
+            )
+        else:
+            visit_code = ""
+            st.caption(
+                t(
+                    language,
+                    "受付で案内された半角数字3桁を入力してください。",
+                    "Please enter the 3-digit number provided by the clinic.",
+                )
+            )
 
         st.divider()
 
@@ -1296,23 +1236,22 @@ else:
             )
             st.stop()
 
-        if result["instrument"] in ["ADCT", "UCT", "DLQI"]:
-            if not re.fullmatch(r"[0-9]{3}", visit_code_digits or ""):
-                st.error(
-                    t(
-                        language,
-                        "匿名コードは、半角数字3桁のみで入力してください。例：001",
-                        "Please enter exactly 3 half-width digits. Example: 001",
-                    )
+        if not re.fullmatch(r"[0-9]{3}", visit_code_digits or ""):
+            st.error(
+                t(
+                    language,
+                    "匿名コードは、半角数字3桁のみで入力してください。例：001",
+                    "Please enter exactly 3 half-width digits. Example: 001",
                 )
-                st.stop()
+            )
+            st.stop()
 
-            prefix_map = {
-    "ADCT": "AD",
-    "DLQI": "PS",
-    "UCT": "UC",
-}
-visit_code = prefix_map[result["instrument"]] + visit_code_digits
+        prefix_map = {
+            "ADCT": "AD",
+            "DLQI": "PS",
+            "UCT": "UC",
+        }
+        visit_code = prefix_map[result["instrument"]] + visit_code_digits
 
         now_dt = datetime.now(JST)
         now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -1459,6 +1398,7 @@ visit_code = prefix_map[result["instrument"]] + visit_code_digits
                     "The maintenance / non-maintenance display is a simplified clinical-support indicator based on ADCT responses and does not automatically determine whether treatment should be continued, changed, or stopped.",
                 )
             )
+
         elif result["instrument"] == "UCT":
             st.subheader(result["severity"])
             st.write(result["interpretation"])
@@ -1495,6 +1435,7 @@ visit_code = prefix_map[result["instrument"]] + visit_code_digits
                     "The UCT result is reference information for understanding urticaria control. Clinical decisions should be made comprehensively by a qualified healthcare professional.",
                 )
             )
+
         else:
             st.subheader(result["severity"])
             st.write(result["interpretation"])
@@ -1567,4 +1508,3 @@ visit_code = prefix_map[result["instrument"]] + visit_code_digits
 
 if __name__ == "__main__":
     main()
-
