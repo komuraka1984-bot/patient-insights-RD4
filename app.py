@@ -22,6 +22,13 @@ CONTACT_EMAIL = "contact@shirabeo.com"
 
 APP_VERSION = "Patient Insight Demo v0.9"
 
+# Facility / project classification
+# These can be overridden in Render Environment for each deployed site.
+SITE_ID = os.getenv("SITE_ID", "KRCH_DERM")
+SITE_NAME = os.getenv("SITE_NAME", "Department of Dermatology, Kanazawa Red Cross Hospital")
+PROJECT_ID = os.getenv("PROJECT_ID", "RD_PRO_PILOT_2026")
+PROJECT_PHASE = os.getenv("PROJECT_PHASE", "RD")
+
 JST = timezone(timedelta(hours=9))
 
 
@@ -356,6 +363,10 @@ def build_email_body(row: dict, result: dict) -> str:
         "",
         f"App: {APP_TITLE}",
         f"Version: {APP_VERSION}",
+        f"Site ID: {row.get('site_id', '')}",
+        f"Site name: {row.get('site_name', '')}",
+        f"Project ID: {row.get('project_id', '')}",
+        f"Project phase: {row.get('project_phase', '')}",
         f"Timestamp: {row.get('timestamp', '')}",
         f"Language: {row.get('language', '')}",
         f"Disease: {row.get('disease', '')}",
@@ -526,8 +537,8 @@ def render_credit_footer(language: str):
     st.caption(
         t(
             language,
-            f"{APP_VERSION} | Developed and operated by Shirabeo Labs. Contact: {CONTACT_EMAIL}",
-            f"{APP_VERSION} | Developed and operated by Shirabeo Labs. Contact: {CONTACT_EMAIL}",
+            f"{APP_VERSION} | {PROJECT_PHASE} implementation for internal pilot use. Site: {SITE_ID} / {SITE_NAME}. Contact: Kazuhiro Komura, Department of Dermatology, Kanazawa Red Cross Hospital.",
+            f"{APP_VERSION} | {PROJECT_PHASE} implementation for internal pilot use. Site: {SITE_ID} / {SITE_NAME}. Contact: Kazuhiro Komura, Department of Dermatology, Kanazawa Red Cross Hospital.",
         )
     )
     st.caption(
@@ -538,16 +549,14 @@ def render_credit_footer(language: str):
         )
     )
 
-
 def render_adct_partner_notice(language: str):
+    st.caption("ADCT - Atopic Dermatitis Control Tool")
     st.caption(
-        t(
-            language,
-            "SanofiおよびRegeneronは、アトピー性皮膚炎領域における疾患啓発・患者報告アウトカム活用に関連する重要なステークホルダーとして表示しています。本アプリはShirabeo Labsが独自に作成・運用するものであり、SanofiまたはRegeneronによる製造・販売・配布・承認・保証・監修・共同開発を意味するものではありません。",
-            "Sanofi and Regeneron are acknowledged as important stakeholders in atopic dermatitis disease awareness and patient-reported outcome utilization. This application is independently developed and operated by Shirabeo Labs and does not imply manufacture, sale, distribution, approval, guarantee, supervision, or co-development by Sanofi or Regeneron.",
-        )
+        "© Atopic Dermatitis Control Tool_Version 1, 27 Nov 2018 Sanofi Group and Regeneron Pharmaceuticals Inc. All Rights Reserved."
     )
-
+    st.caption(
+        "ADCT contact information and permission to use: Mapi Research Trust, Lyon, France, https://eprovide.mapi-trust.org"
+    )
 
 def render_dlqi(language: str):
     questions = DLQI_QUESTIONS_JA if language == "日本語" else DLQI_QUESTIONS_EN
@@ -1026,6 +1035,7 @@ def show_csv_tab(label: str, csv_path: Path, file_name: str):
     summary_cols = [
         "_priority_icon",
         "_priority_label",
+        "site_id",
         "timestamp",
         "visit_code",
         "total_score",
@@ -1041,6 +1051,7 @@ def show_csv_tab(label: str, csv_path: Path, file_name: str):
     rename_map = {
         "_priority_icon": "",
         "_priority_label": "確認区分",
+        "site_id": "施設ID",
         "timestamp": "送信日時",
         "visit_code": "匿名コード",
         "total_score": "スコア",
@@ -1292,6 +1303,10 @@ def main():
         row = {
             "timestamp": now,
             "app_version": APP_VERSION,
+            "site_id": SITE_ID,
+            "site_name": SITE_NAME,
+            "project_id": PROJECT_ID,
+            "project_phase": PROJECT_PHASE,
             "language": language,
             "disease": result["disease"],
             "instrument": result["instrument"],
