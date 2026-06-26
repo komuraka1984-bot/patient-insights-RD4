@@ -106,42 +106,63 @@ DLQI_Q7_OPTIONS_EN = {
 }
 
 
+ADCT_TITLE_JA = "アトピー性皮膚炎のコントロール状態に関する調査票（ADCT）"
+ADCT_TITLE_EN = "Atopic Dermatitis Control Tool"
+
+ADCT_INSTRUCTION_JA = "アトピー性皮膚炎のコントロール状態について、以下の質問にお答えください。"
+ADCT_INSTRUCTION_EN = 'Please answer the following questions thinking about your experiences with eczema, sometimes called “atopic dermatitis.”'
+
+ADCT_COPYRIGHT_JA = (
+    "© Atopic Dermatitis Control Tool_Version 1, 05 Sep 2019 "
+    "Sanofi Group and Regeneron Pharmaceuticals Inc. All Rights Reserved."
+)
+ADCT_COPYRIGHT_EN = (
+    "© Atopic Dermatitis Control Tool_Version 1, 27 Nov 2018 "
+    "Sanofi Group and Regeneron Pharmaceuticals Inc. All Rights Reserved."
+)
+
+ADCT_MAPI_NOTICE_JA = (
+    "For any information on the use of the ADCT, please contact "
+    "Mapi Research Trust, Lyon, France.\n"
+    "Internet: https://eprovide.mapi-trust.org"
+)
+ADCT_MAPI_NOTICE_EN = ADCT_MAPI_NOTICE_JA
+
 ADCT_QUESTIONS_JA = [
-    "この1週間、アトピー性皮膚炎の症状はどの程度でしたか。",
-    "この1週間、アトピー性皮膚炎のために激しいかゆみが起こったことは何日ありましたか。",
-    "この1週間、アトピー性皮膚炎にどの程度悩まされましたか。",
-    "この1週間、アトピー性皮膚炎のためになかなか寝付けなかったり、途中で目が覚めたりすることが何晩ありましたか。",
-    "この1週間、アトピー性皮膚炎がどの程度日常の活動に影響しましたか。",
-    "この1週間、アトピー性皮膚炎がどの程度気分や感情に影響しましたか。",
+    "この 1 週間、アトピー性皮膚炎の症状はどの程度でしたか（例えば、かゆみ、乾燥、発疹）。",
+    "この 1 週間、アトピー性皮膚炎のために激しいかゆみが起こったことは何日ありましたか。",
+    "この 1 週間、アトピー性皮膚炎にどの程度悩まされましたか。",
+    "この 1 週間、アトピー性皮膚炎のためになかなか寝付けなかったり、途中で目が覚めたりすることが何晩ありましたか。",
+    "この 1 週間、アトピー性皮膚炎がどの程度日常の活動に影響しましたか。",
+    "この 1 週間、アトピー性皮膚炎がどの程度気分や感情に影響しましたか。",
 ]
 
 ADCT_QUESTIONS_EN = [
-    "Over the last week, how would you rate your eczema symptoms?",
-    "Over the last week, on how many days did you have intense episodes of itching because of your eczema?",
+    "Over the last week, how would you rate your eczema-related symptoms (for example, itching, dry skin, skin rash)?",
+    "Over the last week, how many days did you have intense episodes of itching because of your eczema?",
     "Over the last week, how bothered have you been by your eczema?",
-    "Over the last week, on how many nights did you have difficulty falling asleep or wake up during the night because of your eczema?",
+    "Over the last week, how many nights did you have trouble falling or staying asleep because of your eczema?",
     "Over the last week, how much did your eczema affect your daily activities?",
     "Over the last week, how much did your eczema affect your mood or emotions?",
 ]
 
 ADCT_OPTIONS_JA = [
     {"なし": 0, "軽い": 1, "中くらい": 2, "ひどい": 3, "かなりひどい": 4},
-    {"全くなかった": 0, "1〜2日": 1, "3〜4日": 2, "5〜6日": 3, "毎日": 4},
+    {"全くなかった": 0, "1～2 日": 1, "3～4 日": 2, "5～6 日": 3, "毎日": 4},
     {"全くなかった": 0, "少し": 1, "ある程度": 2, "とても": 3, "極めて": 4},
-    {"全くなかった": 0, "1〜2晩": 1, "3〜4晩": 2, "5〜6晩": 3, "毎晩": 4},
+    {"全くなかった": 0, "1～2 晩": 1, "3～4 晩": 2, "5～6 晩": 3, "毎晩": 4},
     {"全くなかった": 0, "少し": 1, "ある程度": 2, "とても": 3, "極めて": 4},
     {"全くなかった": 0, "少し": 1, "ある程度": 2, "とても": 3, "極めて": 4},
 ]
 
 ADCT_OPTIONS_EN = [
-    {"None": 0, "Mild": 1, "Moderate": 2, "Severe": 3, "Very severe": 4},
-    {"Not at all": 0, "1–2 days": 1, "3–4 days": 2, "5–6 days": 3, "Every day": 4},
-    {"Not at all": 0, "A little": 1, "Moderately": 2, "Very much": 3, "Extremely": 4},
-    {"Not at all": 0, "1–2 nights": 1, "3–4 nights": 2, "5–6 nights": 3, "Every night": 4},
-    {"Not at all": 0, "A little": 1, "Moderately": 2, "Very much": 3, "Extremely": 4},
-    {"Not at all": 0, "A little": 1, "Moderately": 2, "Very much": 3, "Extremely": 4},
+    {"None": 0, "Mild": 1, "Moderate": 2, "Severe": 3, "Very Severe": 4},
+    {"Not at all": 0, "1-2 days": 1, "3-4 days": 2, "5-6 days": 3, "Every day": 4},
+    {"Not at all": 0, "A little": 1, "Moderately": 2, "Very": 3, "Extremely": 4},
+    {"No nights": 0, "1-2 nights": 1, "3-4 nights": 2, "5-6 nights": 3, "Every night": 4},
+    {"Not at all": 0, "A little": 1, "Moderately": 2, "A lot": 3, "Extremely": 4},
+    {"Not at all": 0, "A little": 1, "Moderately": 2, "A lot": 3, "Extremely": 4},
 ]
-
 
 UCT_QUESTIONS_JA = [
     "この4週間に、じんましんによる症状（痒み、膨疹、腫れ）がどのくらいありましたか。",
@@ -309,16 +330,6 @@ def judge_adct_control(current: int, previous: int | None, scores: list[int], la
         reasons_ja.append("ADCT総スコアが7点以上")
         reasons_en.append("ADCT total score is 7 or higher")
 
-    blue_threshold_items = [0, 1, 2, 4, 5]
-    for i in blue_threshold_items:
-        if len(scores) > i and scores[i] >= 2:
-            reasons_ja.append(f"Q{i + 1}が2点以上")
-            reasons_en.append(f"Q{i + 1} score is 2 or higher")
-
-    if len(scores) > 3 and scores[3] >= 1:
-        reasons_ja.append("Q4が1点以上")
-        reasons_en.append("Q4 score is 1 or higher")
-
     if previous is not None and (current - previous) >= 5:
         reasons_ja.append("前回から5点以上増加")
         reasons_en.append("Increase of 5 points or more from previous ADCT")
@@ -350,12 +361,11 @@ def judge_adct_control(current: int, previous: int | None, scores: list[int], la
         ),
         "message": t(
             language,
-            "ADCTの結果から、現時点では比較的コントロール良好と考えられます。通常診療の中で確認を継続してください。",
-            "Based on the ADCT result, the condition appears relatively controlled at this time. Continue routine clinical review.",
+            "ADCTは7点未満で、前回から5点以上の増加もありません。通常診療の中で確認を継続してください。",
+            "ADCT is below 7 and has not increased by 5 points or more from the previous score. Continue routine clinical review.",
         ),
         "reasons": [],
     }
-
 
 def build_email_body(row: dict, result: dict) -> str:
     lines = [
@@ -551,13 +561,10 @@ def render_credit_footer(language: str):
 
 def render_adct_partner_notice(language: str):
     st.caption("ADCT - Atopic Dermatitis Control Tool")
+    st.caption(ADCT_COPYRIGHT_JA if language == "日本語" else ADCT_COPYRIGHT_EN)
     st.caption(
-        "© Atopic Dermatitis Control Tool_Version 1, 27 Nov 2018 Sanofi Group and Regeneron Pharmaceuticals Inc. All Rights Reserved."
+        "For any information on the use of the ADCT, please contact Mapi Research Trust, Lyon, France. Internet: https://eprovide.mapi-trust.org"
     )
-    st.caption(
-        "ADCT contact information and permission to use: Mapi Research Trust, Lyon, France, https://eprovide.mapi-trust.org"
-    )
-
 def render_dlqi(language: str):
     questions = DLQI_QUESTIONS_JA if language == "日本語" else DLQI_QUESTIONS_EN
     options_common = DLQI_OPTIONS_JA if language == "日本語" else DLQI_OPTIONS_EN
@@ -640,12 +647,20 @@ def render_uct(language: str):
 def render_adct(language: str):
     questions = ADCT_QUESTIONS_JA if language == "日本語" else ADCT_QUESTIONS_EN
     options_list = ADCT_OPTIONS_JA if language == "日本語" else ADCT_OPTIONS_EN
+    adct_title = ADCT_TITLE_JA if language == "日本語" else ADCT_TITLE_EN
+    adct_instruction = ADCT_INSTRUCTION_JA if language == "日本語" else ADCT_INSTRUCTION_EN
+    adct_copyright = ADCT_COPYRIGHT_JA if language == "日本語" else ADCT_COPYRIGHT_EN
+    adct_mapi_notice = ADCT_MAPI_NOTICE_JA if language == "日本語" else ADCT_MAPI_NOTICE_EN
 
     scores = []
     answers = []
 
+    st.markdown(f"### {adct_title}")
+    st.write(adct_instruction)
+    st.caption(adct_copyright)
+
     for i, q in enumerate(questions, start=1):
-        st.markdown(f"**Q{i}. {q}**")
+        st.markdown(f"**{i}. {q}**")
         opts = options_list[i - 1]
         answer = st.radio(
             t(language, f"Q{i}の回答", f"Answer Q{i}"),
@@ -655,7 +670,18 @@ def render_adct(language: str):
         )
         scores.append(opts[answer])
         answers.append(answer)
+        st.caption(adct_copyright)
         st.write("")
+
+    st.markdown("---")
+    st.text(adct_mapi_notice)
+    st.caption(
+        t(
+            language,
+            "上記URLは文字列として表示しています。外部リンクとしては機能しません。",
+            "The URL above is displayed as plain text and is not an active external link.",
+        )
+    )
 
     st.markdown("---")
     st.markdown(
@@ -713,7 +739,6 @@ def render_adct(language: str):
         "input_support": input_support,
         "input_ease": input_ease,
     }
-
 
 def clinician_priority_label(row: pd.Series, instrument_label: str) -> tuple[str, str]:
     decision = str(row.get("decision", "") or "")
@@ -1401,8 +1426,8 @@ def main():
                     st.caption(
                         t(
                             language,
-                            "ADCT総スコア、各項目スコア、前回比のいずれも非維持条件には該当しませんでした。",
-                            "The total ADCT score, item scores, and change from previous ADCT did not meet the non-maintenance criteria.",
+                            "ADCT総スコアおよび前回比は、非維持条件には該当しませんでした。",
+                            "The total ADCT score and change from previous ADCT did not meet the non-maintenance criteria.",
                         )
                     )
 
