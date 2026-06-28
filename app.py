@@ -560,11 +560,10 @@ def render_credit_footer(language: str):
     )
 
 def render_adct_partner_notice(language: str):
-    st.caption("ADCT - Atopic Dermatitis Control Tool")
-    st.caption(ADCT_COPYRIGHT_JA if language == "日本語" else ADCT_COPYRIGHT_EN)
-    st.caption(
-        "For any information on the use of the ADCT, please contact Mapi Research Trust, Lyon, France. Internet: https://eprovide.mapi-trust.org"
-    )
+    # ADCT copyright and Mapi contact notice are displayed within the ADCT block itself.
+    # Avoid duplicating them again in the general app footer.
+    return
+
 def render_dlqi(language: str):
     questions = DLQI_QUESTIONS_JA if language == "日本語" else DLQI_QUESTIONS_EN
     options_common = DLQI_OPTIONS_JA if language == "日本語" else DLQI_OPTIONS_EN
@@ -657,7 +656,6 @@ def render_adct(language: str):
 
     st.markdown(f"### {adct_title}")
     st.write(adct_instruction)
-    st.caption(adct_copyright)
 
     for i, q in enumerate(questions, start=1):
         st.markdown(f"**{i}. {q}**")
@@ -665,23 +663,24 @@ def render_adct(language: str):
         answer = st.radio(
             t(language, f"Q{i}の回答", f"Answer Q{i}"),
             list(opts.keys()),
+            index=None,
             key=f"adct_{language}_{i}",
             label_visibility="collapsed",
         )
-        scores.append(opts[answer])
-        answers.append(answer)
-        st.caption(adct_copyright)
+        if answer is None:
+            scores.append(None)
+            answers.append("")
+        else:
+            scores.append(opts[answer])
+            answers.append(answer)
         st.write("")
 
+    # Display owner copyright notice once at the bottom of the ADCT questionnaire block.
+    st.caption(adct_copyright)
+
+    # Display Mapi contact notice as plain text. Do not render the URL as an active link.
     st.markdown("---")
     st.text(adct_mapi_notice)
-    st.caption(
-        t(
-            language,
-            "上記URLは文字列として表示しています。外部リンクとしては機能しません。",
-            "The URL above is displayed as plain text and is not an active external link.",
-        )
-    )
 
     st.markdown("---")
     st.markdown(
@@ -705,6 +704,7 @@ def render_adct(language: str):
             "How was this questionnaire entered?",
         ),
         input_support_options,
+        index=None,
         key=f"adct_input_support_{language}",
     )
 
@@ -721,10 +721,32 @@ def render_adct(language: str):
             "How easy or difficult was this entry process?",
         ),
         input_ease_options,
+        index=None,
         key=f"adct_input_ease_{language}",
     )
 
-    total = int(sum(scores))
+    has_missing_adct = any(score is None for score in scores)
+    has_missing_pilot_questions = input_support is None or input_ease is None
+
+    if has_missing_adct:
+        st.warning(
+            t(
+                language,
+                "ADCTの全6項目に回答してください。",
+                "Please answer all 6 ADCT items.",
+            )
+        )
+
+    if has_missing_pilot_questions:
+        st.warning(
+            t(
+                language,
+                "試験運用に関する確認項目にも回答してください。",
+                "Please also answer the pilot-operation questions.",
+            )
+        )
+
+    total = int(sum(score for score in scores if score is not None))
     severity, interpretation = interpret_adct(total, language)
 
     return {
@@ -736,9 +758,11 @@ def render_adct(language: str):
         "interpretation": interpretation,
         "scores": scores,
         "answers": answers,
-        "input_support": input_support,
-        "input_ease": input_ease,
+        "input_support": input_support or "",
+        "input_ease": input_ease or "",
+        "is_complete": not has_missing_adct and not has_missing_pilot_questions,
     }
+
 
 def clinician_priority_label(row: pd.Series, instrument_label: str) -> tuple[str, str]:
     decision = str(row.get("decision", "") or "")
@@ -1282,6 +1306,16 @@ def main():
             )
             st.stop()
 
+        if result["instrument"] == "ADCT" and any(score is None for score in result.get("scores", [])):
+            st.error(
+                t(
+                    language,
+                    "ADCTのすべての質問に回答してください。",
+                    "Please answer all ADCT questions.",
+                )
+            )
+            st.stop()
+
         prefix_map = {
             "ADCT": "AD",
             "DLQI": "PS",
@@ -1310,6 +1344,16 @@ def main():
         decision = ""
         decision_reasons = ""
         adct_judgement = None
+
+        if result.get("instrument") == "ADCT" and not result.get("is_complete", True):
+            st.error(
+                t(
+                    language,
+                    "ADCTの全項目と試験運用に関する確認項目に回答してから送信してください。",
+                    "Please answer all ADCT items and pilot-operation questions before submitting.",
+                )
+            )
+            st.stop()
 
         if result["instrument"] == "ADCT":
             previous_adct = get_previous_adct(visit_code)
