@@ -79,11 +79,20 @@ def send_to_google_sheet(row):
     }
 
     try:
-        res = requests.post(url, json=payload, timeout=10)
-        print("GOOGLE SHEET STATUS:", res.status_code, res.text)
+        print("===== GOOGLE SHEET PAYLOAD =====")
+        print(payload)
+
+        res = requests.post(url, json=payload, timeout=20)
+
+        print("===== GOOGLE SHEET RESPONSE =====")
+        print(res.status_code)
+        print(res.text)
+
         return res.status_code == 200
+
     except Exception as e:
-        print("GOOGLE SHEET ERROR:", e)
+        print("===== GOOGLE SHEET ERROR =====")
+        print(e)
         return False
 
 
@@ -1198,6 +1207,7 @@ def main():
     st.title(APP_TITLE)
     st.caption("DLQI for psoriasis / ADCT for atopic dermatitis / UCT for urticaria")
     st.caption(APP_VERSION)
+    st.caption("RD4 Google Sheet debug version")
 
     language = st.sidebar.radio("Language / 言語", ["日本語", "English"], index=0)
 
