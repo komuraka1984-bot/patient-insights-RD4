@@ -51,6 +51,42 @@ def send_to_google_form(row):
         return False
 
 
+def send_to_google_sheet(row):
+    url = os.getenv("GOOGLE_SCRIPT_URL")
+
+    if not url:
+        print("GOOGLE_SCRIPT_URL is not set")
+        return False
+
+    payload = {
+        "anonymous_id": row.get("visit_code", ""),
+        "facility_id": row.get("site_id", ""),
+        "disease": row.get("disease", ""),
+        "scale": row.get("instrument", ""),
+        "adct_q1": row.get("q1_score", ""),
+        "adct_q2": row.get("q2_score", ""),
+        "adct_q3": row.get("q3_score", ""),
+        "adct_q4": row.get("q4_score", ""),
+        "adct_q5": row.get("q5_score", ""),
+        "adct_q6": row.get("q6_score", ""),
+        "adct_total": row.get("total_score", ""),
+        "input_time_seconds": row.get("input_duration_seconds", ""),
+        "input_support": row.get("input_support", ""),
+        "research_consent": row.get("research_consent_checked", ""),
+        "doctor_check": row.get("decision", ""),
+        "treatment_changed": "",
+        "memo": row.get("decision_reasons", ""),
+    }
+
+    try:
+        res = requests.post(url, json=payload, timeout=10)
+        print("GOOGLE SHEET STATUS:", res.status_code, res.text)
+        return res.status_code == 200
+    except Exception as e:
+        print("GOOGLE SHEET ERROR:", e)
+        return False
+
+
 DLQI_QUESTIONS_JA = [
     "この1週間で、皮膚のかゆみ・痛み・ヒリヒリ感・しみる感じはどの程度ありましたか？",
     "この1週間で、皮膚のために恥ずかしい、または人目が気になると感じたことはどの程度ありましたか？",
@@ -1406,6 +1442,7 @@ def main():
 
         save_result(row)
         send_to_google_form(row)
+        send_to_google_sheet(row)
 
         st.session_state["questionnaire_started_at"] = datetime.now(JST).isoformat()
         st.session_state["questionnaire_timer_disease_mode"] = disease_mode
