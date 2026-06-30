@@ -20,7 +20,7 @@ CSV_PATH_UCT = Path("data/rd_uct_responses.csv")
 ADMIN_EMAIL = "komura@shirabeo.com"
 CONTACT_EMAIL = "contact@shirabeo.com"
 
-APP_VERSION = "Patient Insight Demo v0.9"
+APP_VERSION = "Patient Insight Demo v0.9.1"
 
 # Facility / project classification
 # These can be overridden in Render Environment for each deployed site.
@@ -52,43 +52,72 @@ def send_to_google_form(row):
 
 
 def send_to_google_sheet(row):
+    """Send one submission row to Google Apps Script Web App.
+
+    RD4内部の列名（q1_score, total_scoreなど）と、
+    Google Apps Script側の列名（adct_q1, adct_totalなど）をここで対応させる。
+    """
     url = os.getenv("GOOGLE_SCRIPT_URL")
 
     if not url:
         print("GOOGLE_SCRIPT_URL is not set")
         return False
 
+    def pick(*keys, default=""):
+        """Return the first non-empty value found in row."""
+        for key in keys:
+            value = row.get(key, "")
+            if value is not None and value != "":
+                return value
+        return default
+
     payload = {
-        "anonymous_id": row.get("visit_code", ""),
-        "facility_id": row.get("site_id", ""),
-        "disease": row.get("disease", ""),
-        "scale": row.get("instrument", ""),
-        "adct_q1": row.get("q1_score", ""),
-        "adct_q2": row.get("q2_score", ""),
-        "adct_q3": row.get("q3_score", ""),
-        "adct_q4": row.get("q4_score", ""),
-        "adct_q5": row.get("q5_score", ""),
-        "adct_q6": row.get("q6_score", ""),
-        "adct_total": row.get("total_score", ""),
-        "input_time_seconds": row.get("input_duration_seconds", ""),
-        "input_support": row.get("input_support", ""),
-        "research_consent": row.get("research_consent_checked", ""),
-        "doctor_check": row.get("decision", ""),
-        "treatment_changed": "",
-        "memo": row.get("decision_reasons", ""),
+        "anonymous_id": pick("anonymous_id", "visit_code"),
+        "facility_id": pick("facility_id", "site_id", default=SITE_ID),
+        "disease": pick("disease"),
+        "scale": pick("scale", "instrument"),
+
+        # RD4 stores item scores as q1_score ... q6_score.
+        # GAS receives them as adct_q1 ... adct_q6.
+        "adct_q1": pick("adct_q1", "q1_score", "q1"),
+        "adct_q2": pick("adct_q2", "q2_score", "q2"),
+        "adct_q3": pick("adct_q3", "q3_score", "q3"),
+        "adct_q4": pick("adct_q4", "q4_score", "q4"),
+        "adct_q5": pick("adct_q5", "q5_score", "q5"),
+        "adct_q6": pick("adct_q6", "q6_score", "q6"),
+
+        "adct_total": pick("adct_total", "total_score", "total"),
+        "input_time_seconds": pick("input_time_seconds", "input_duration_seconds"),
+        "input_support": pick("input_support"),
+        "research_consent": pick("research_consent", "research_consent_checked"),
+        "doctor_check": pick("doctor_check", "decision"),
+        "treatment_changed": pick("treatment_changed"),
+        "memo": pick("memo", "decision_reasons"),
     }
 
     try:
         print("===== GOOGLE SHEET PAYLOAD =====")
         print(payload)
 
-        res = requests.post(url, json=payload, timeout=20)
+        res = requests.post(
+            url,
+            json=payload,
+            timeout=20,
+            allow_redirects=True,
+        )
 
         print("===== GOOGLE SHEET RESPONSE =====")
         print(res.status_code)
-        print(res.text)
+        print(res.text[:1000])
 
-        return res.status_code == 200
+        if res.status_code != 200:
+            return False
+
+        try:
+            body = res.json()
+            return body.get("result") == "success"
+        except Exception:
+            return '"success"' in res.text
 
     except Exception as e:
         print("===== GOOGLE SHEET ERROR =====")
@@ -1207,7 +1236,7 @@ def main():
     st.title(APP_TITLE)
     st.caption("DLQI for psoriasis / ADCT for atopic dermatitis / UCT for urticaria")
     st.caption(APP_VERSION)
-    st.caption("RD4 Google Sheet debug version")
+    st.caption("RD4 Google Sheet fixed version")
 
     language = st.sidebar.radio("Language / 言語", ["日本語", "English"], index=0)
 
