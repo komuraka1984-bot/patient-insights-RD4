@@ -53,6 +53,7 @@ def send_to_google_form(row):
 
 def send_to_google_sheet(row):
     url = os.getenv("GOOGLE_SCRIPT_URL")
+　　　st.write("GOOGLE_SCRIPT_URL =", url)
 
     if not url:
         print("GOOGLE_SCRIPT_URL is not set")
