@@ -89,6 +89,7 @@ def send_to_google_sheet(row):
         "adct_total": pick("adct_total", "total_score", "total"),
         "input_time_seconds": pick("input_time_seconds", "input_duration_seconds"),
         "input_support": pick("input_support"),
+        "input_ease": row.get("input_ease", ""),
         "research_consent": pick("research_consent", "research_consent_checked"),
         "doctor_check": pick("doctor_check", "decision"),
         "treatment_changed": pick("treatment_changed"),
