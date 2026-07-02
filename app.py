@@ -20,7 +20,7 @@ CSV_PATH_UCT = Path("data/rd_uct_responses.csv")
 ADMIN_EMAIL = "komura@shirabeo.com"
 CONTACT_EMAIL = "contact@shirabeo.com"
 
-APP_VERSION = "Patient Insight Demo v0.9.1"
+APP_VERSION = "Patient Insight Demo v0.9.2"
 
 # Facility / project classification
 # These can be overridden in Render Environment for each deployed site.
@@ -222,21 +222,21 @@ ADCT_QUESTIONS_EN = [
 ]
 
 ADCT_OPTIONS_JA = [
-    {"なし": 0, "軽い": 1, "中くらい": 2, "ひどい": 3, "かなりひどい": 4},
-    {"全くなかった": 0, "1～2 日": 1, "3～4 日": 2, "5～6 日": 3, "毎日": 4},
-    {"全くなかった": 0, "少し": 1, "ある程度": 2, "とても": 3, "極めて": 4},
-    {"全くなかった": 0, "1～2 晩": 1, "3～4 晩": 2, "5～6 晩": 3, "毎晩": 4},
-    {"全くなかった": 0, "少し": 1, "ある程度": 2, "とても": 3, "極めて": 4},
-    {"全くなかった": 0, "少し": 1, "ある程度": 2, "とても": 3, "極めて": 4},
+    {"0　なし": 0, "1　軽い": 1, "2　中くらい": 2, "3　ひどい": 3, "4　かなりひどい": 4},
+    {"0　全くなかった": 0, "1　1～2 日": 1, "2　3～4 日": 2, "3　5～6 日": 3, "4　毎日": 4},
+    {"0　全くなかった": 0, "1　少し": 1, "2　ある程度": 2, "3　とても": 3, "4　極めて": 4},
+    {"0　全くなかった": 0, "1　1～2 晩": 1, "2　3～4 晩": 2, "3　5～6 晩": 3, "4　毎晩": 4},
+    {"0　全くなかった": 0, "1　少し": 1, "2　ある程度": 2, "3　とても": 3, "4　極めて": 4},
+    {"0　全くなかった": 0, "1　少し": 1, "2　ある程度": 2, "3　とても": 3, "4　極めて": 4},
 ]
 
 ADCT_OPTIONS_EN = [
-    {"None": 0, "Mild": 1, "Moderate": 2, "Severe": 3, "Very Severe": 4},
-    {"Not at all": 0, "1-2 days": 1, "3-4 days": 2, "5-6 days": 3, "Every day": 4},
-    {"Not at all": 0, "A little": 1, "Moderately": 2, "Very": 3, "Extremely": 4},
-    {"No nights": 0, "1-2 nights": 1, "3-4 nights": 2, "5-6 nights": 3, "Every night": 4},
-    {"Not at all": 0, "A little": 1, "Moderately": 2, "A lot": 3, "Extremely": 4},
-    {"Not at all": 0, "A little": 1, "Moderately": 2, "A lot": 3, "Extremely": 4},
+    {"0　None": 0, "1　Mild": 1, "2　Moderate": 2, "3　Severe": 3, "4　Very Severe": 4},
+    {"0　Not at all": 0, "1　1-2 days": 1, "2　3-4 days": 2, "3　5-6 days": 3, "4　Every day": 4},
+    {"0　Not at all": 0, "1　A little": 1, "2　Moderately": 2, "3　Very": 3, "4　Extremely": 4},
+    {"0　No nights": 0, "1　1-2 nights": 1, "2　3-4 nights": 2, "3　5-6 nights": 3, "4　Every night": 4},
+    {"0　Not at all": 0, "1　A little": 1, "2　Moderately": 2, "3　A lot": 3, "4　Extremely": 4},
+    {"0　Not at all": 0, "1　A little": 1, "2　Moderately": 2, "3　A lot": 3, "4　Extremely": 4},
 ]
 
 UCT_QUESTIONS_JA = [
@@ -1237,7 +1237,7 @@ def main():
     st.title(APP_TITLE)
     st.caption("DLQI for psoriasis / ADCT for atopic dermatitis / UCT for urticaria")
     st.caption(APP_VERSION)
-    st.caption("RD4 Google Sheet fixed version")
+    st.caption("RD4 Google Sheet fixed version / ADCT score-number display")
 
     language = st.sidebar.radio("Language / 言語", ["日本語", "English"], index=0)
 
