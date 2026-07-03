@@ -20,7 +20,7 @@ CSV_PATH_UCT = Path("data/rd_uct_responses.csv")
 ADMIN_EMAIL = "komura@shirabeo.com"
 CONTACT_EMAIL = "contact@shirabeo.com"
 
-APP_VERSION = "Patient Insight Demo v0.9.2"
+APP_VERSION = "Patient Insight Demo v0.9.3"
 
 # Facility / project classification
 # These can be overridden in Render Environment for each deployed site.
@@ -239,11 +239,38 @@ ADCT_OPTIONS_EN = [
     {"0　Not at all": 0, "1　A little": 1, "2　Moderately": 2, "3　A lot": 3, "4　Extremely": 4},
 ]
 
+UCT_TITLE_JA = "蕁麻疹状況調査\nUrticaria Control Test"
+UCT_TITLE_EN = "Urticaria Control Test (UCT)"
+
+UCT_INSTRUCTION_JA = (
+    "蕁麻疹の患者さんにお尋ねします。以下の質問は、あなたの現在の症状をお聞きするものです。\n"
+    "各質問をよく読んで、5 つの選択肢の中からあなたの状態に最もあてはまるものを選んでください。\n"
+    "直近の 4 週間についてお答えください。あまり長い時間考え込まないようにして、すべての質問に１つだけ回答を選んでお答えください。"
+)
+UCT_INSTRUCTION_EN = (
+    "Please read each question carefully and choose the one answer from the five options "
+    "that best applies to your condition. Please answer based on the last 4 weeks."
+)
+
+UCT_COPYRIGHT_JA = (
+    "This document must not be copied or used without the permission of MOXIE GmbH. "
+    "For scientific or commercial use or in case a translation / cross cultural adaptation is intended, "
+    "please check the terms and conditions on www.moxie-gmbh.de."
+)
+UCT_COPYRIGHT_EN = UCT_COPYRIGHT_JA
+
 UCT_QUESTIONS_JA = [
-    "この4週間に、じんましんによる症状（痒み、膨疹、腫れ）がどのくらいありましたか。",
-    "この4週間に、じんましんによってあなたの生活の質はどのくらい損なわれましたか。",
-    "この4週間に、じんましんの治療があなたの症状を抑えるのに十分でなかったことがどのくらいありましたか。",
-    "全体として、この4週間にあなたのじんましんはどのくらい良い状態に保たれていましたか。",
+    "この 4 週間に、蕁麻疹による症状(痒み、膨疹※、腫れ)がどのくらいありましたか？",
+    "この 4 週間に、蕁麻疹によってあなたの生活の質はどのくらい損なわれましたか？",
+    "この 4 週間に、蕁麻疹の治療があなたの症状を抑えるのに十分でなかったことがどのくらいありましたか？",
+    "全体として、この 4 週間にあなたの蕁麻疹はどのくらい良い状態に保たれていましたか？",
+]
+
+UCT_QUESTION_NOTES_JA = [
+    "※膨疹：蚊に刺された時やミミズ腫れのような皮膚の膨らみ",
+    "",
+    "",
+    "",
 ]
 
 UCT_QUESTIONS_EN = [
@@ -253,11 +280,24 @@ UCT_QUESTIONS_EN = [
     "Overall, over the last 4 weeks, how well has your urticaria been controlled?",
 ]
 
+UCT_QUESTION_NOTES_EN = [
+    "",
+    "",
+    "",
+    "",
+]
+
 UCT_OPTIONS_JA = [
     {"非常に強い": 0, "強い": 1, "ある程度": 2, "わずか": 3, "全くない": 4},
     {"非常に強い": 0, "強い": 1, "ある程度": 2, "わずか": 3, "全くない": 4},
     {"非常に頻繁": 0, "頻繁": 1, "時々": 2, "まれに": 3, "全くない": 4},
-    {"全く保たれていなかった": 0, "わずかに保たれていた": 1, "ある程度保たれていた": 2, "良く保たれていた": 3, "完全に保たれていた": 4},
+    {
+        "全く(保たれていなかった)": 0,
+        "わずかに(しか保たれていなかった)": 1,
+        "ある程度（保たれていた）": 2,
+        "良く(保たれていた)": 3,
+        "完全に（保たれていた）": 4,
+    },
 ]
 
 UCT_OPTIONS_EN = [
@@ -677,33 +717,55 @@ def render_dlqi(language: str):
 
 def render_uct(language: str):
     questions = UCT_QUESTIONS_JA if language == "日本語" else UCT_QUESTIONS_EN
+    question_notes = UCT_QUESTION_NOTES_JA if language == "日本語" else UCT_QUESTION_NOTES_EN
     options_list = UCT_OPTIONS_JA if language == "日本語" else UCT_OPTIONS_EN
+    uct_title = UCT_TITLE_JA if language == "日本語" else UCT_TITLE_EN
+    uct_instruction = UCT_INSTRUCTION_JA if language == "日本語" else UCT_INSTRUCTION_EN
+    uct_copyright = UCT_COPYRIGHT_JA if language == "日本語" else UCT_COPYRIGHT_EN
 
     scores = []
     answers = []
 
-    st.caption(
-        t(
-            language,
-            "直近の4週間を振り返って回答してください。",
-            "Please answer based on the last 4 weeks.",
-        )
-    )
+    st.markdown(f"### {uct_title}")
+    st.write(uct_instruction)
 
     for i, q in enumerate(questions, start=1):
-        st.markdown(f"**Q{i}. {q}**")
+        st.markdown(f"**{i}. {q}**")
+        note = question_notes[i - 1]
+        if note:
+            st.caption(note)
+
         opts = options_list[i - 1]
         answer = st.radio(
             t(language, f"Q{i}の回答", f"Answer Q{i}"),
             list(opts.keys()),
+            index=None,
             key=f"uct_{language}_{i}",
             label_visibility="collapsed",
         )
-        scores.append(opts[answer])
-        answers.append(answer)
+        if answer is None:
+            scores.append(None)
+            answers.append("")
+        else:
+            scores.append(opts[answer])
+            answers.append(answer)
         st.write("")
 
-    total = int(sum(scores))
+    has_missing_uct = any(score is None for score in scores)
+
+    if has_missing_uct:
+        st.warning(
+            t(
+                language,
+                "UCTの全4項目に回答してください。",
+                "Please answer all 4 UCT items.",
+            )
+        )
+
+    # Display MOXIE copyright notice once at the bottom of the UCT questionnaire block.
+    st.caption(uct_copyright)
+
+    total = int(sum(score for score in scores if score is not None))
     severity, interpretation = interpret_uct(total, language)
 
     return {
@@ -715,6 +777,7 @@ def render_uct(language: str):
         "interpretation": interpretation,
         "scores": scores,
         "answers": answers,
+        "is_complete": not has_missing_uct,
     }
 
 
@@ -1227,7 +1290,7 @@ def get_code_prefix_and_disease_name(disease_mode: str, language: str):
     if "ADCT" in disease_mode:
         return "AD", "アトピー性皮膚炎", "atopic dermatitis"
     if "UCT" in disease_mode:
-        return "UC", "じんましん", "urticaria"
+        return "UC", "蕁麻疹", "urticaria"
     return "PS", "乾癬", "psoriasis"
 
 
@@ -1237,7 +1300,7 @@ def main():
     st.title(APP_TITLE)
     st.caption("DLQI for psoriasis / ADCT for atopic dermatitis / UCT for urticaria")
     st.caption(APP_VERSION)
-    st.caption("RD4 Google Sheet fixed version / ADCT score-number display")
+    st.caption("RD4 Google Sheet fixed version / ADCT score-number display / UCT original-text alignment")
 
     language = st.sidebar.radio("Language / 言語", ["日本語", "English"], index=0)
 
@@ -1258,7 +1321,7 @@ def main():
         [
             t(language, "乾癬：DLQI", "Psoriasis: DLQI"),
             t(language, "アトピー性皮膚炎：ADCT", "Atopic dermatitis: ADCT"),
-            t(language, "じんましん：UCT", "Urticaria: UCT"),
+            t(language, "蕁麻疹：UCT", "Urticaria: UCT"),
         ],
         index=default_index,
     )
@@ -1388,6 +1451,16 @@ def main():
                     language,
                     "ADCTのすべての質問に回答してください。",
                     "Please answer all ADCT questions.",
+                )
+            )
+            st.stop()
+
+        if result["instrument"] == "UCT" and not result.get("is_complete", True):
+            st.error(
+                t(
+                    language,
+                    "UCTのすべての質問に回答してください。",
+                    "Please answer all UCT questions.",
                 )
             )
             st.stop()
