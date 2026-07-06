@@ -20,7 +20,7 @@ CSV_PATH_UCT = Path("data/rd_uct_responses.csv")
 ADMIN_EMAIL = "komura@shirabeo.com"
 CONTACT_EMAIL = "contact@shirabeo.com"
 
-APP_VERSION = "Patient Insight Demo v0.9.3"
+APP_VERSION = "Patient Insight Demo v0.9.4"
 
 # Facility / project classification
 # These can be overridden in Render Environment for each deployed site.
@@ -54,8 +54,19 @@ def send_to_google_form(row):
 def send_to_google_sheet(row):
     """Send one submission row to Google Apps Script Web App.
 
-    RD4内部の列名（q1_score, total_scoreなど）と、
-    Google Apps Script側の列名（adct_q1, adct_totalなど）をここで対応させる。
+    MASTERシート1本運用用。
+    - ADCT入力時は adct_* のみ埋める
+    - UCT入力時は uct_* のみ埋める
+    - DLQI入力時は dlqi_* のみ埋める
+
+    Google Sheet側の想定ヘッダー：
+    timestamp, anonymous_id, facility_id, disease, scale,
+    adct_q1 ... adct_q6, adct_total,
+    input_time_seconds, input_support, input_ease, research_consent,
+    doctor_check, treatment, treatment_changed, memo,
+    uct_q1 ... uct_q4, uct_total,
+    dlqi_q1 ... dlqi_q10, dlqi_total,
+    visit_date, max_score
     """
     url = os.getenv("GOOGLE_SCRIPT_URL")
 
@@ -71,30 +82,79 @@ def send_to_google_sheet(row):
                 return value
         return default
 
+    def item_score(n: int):
+        """Return item score from either normalized or RD4 internal keys."""
+        return pick(f"q{n}_score", f"q{n}")
+
+    timestamp = str(pick("timestamp", "input_submitted_at"))
+    visit_date = timestamp[:10] if timestamp else ""
+    scale = str(pick("scale", "instrument")).upper()
+    total_score = pick("total_score", "total")
+    max_score = pick("max_score")
+
     payload = {
+        "timestamp": timestamp,
         "anonymous_id": pick("anonymous_id", "visit_code"),
         "facility_id": pick("facility_id", "site_id", default=SITE_ID),
         "disease": pick("disease"),
-        "scale": pick("scale", "instrument"),
+        "scale": scale,
 
-        # RD4 stores item scores as q1_score ... q6_score.
-        # GAS receives them as adct_q1 ... adct_q6.
-        "adct_q1": pick("adct_q1", "q1_score", "q1"),
-        "adct_q2": pick("adct_q2", "q2_score", "q2"),
-        "adct_q3": pick("adct_q3", "q3_score", "q3"),
-        "adct_q4": pick("adct_q4", "q4_score", "q4"),
-        "adct_q5": pick("adct_q5", "q5_score", "q5"),
-        "adct_q6": pick("adct_q6", "q6_score", "q6"),
+        "adct_q1": "",
+        "adct_q2": "",
+        "adct_q3": "",
+        "adct_q4": "",
+        "adct_q5": "",
+        "adct_q6": "",
+        "adct_total": "",
 
-        "adct_total": pick("adct_total", "total_score", "total"),
         "input_time_seconds": pick("input_time_seconds", "input_duration_seconds"),
         "input_support": pick("input_support"),
-        "input_ease": row.get("input_ease", ""),
+        "input_ease": pick("input_ease"),
         "research_consent": pick("research_consent", "research_consent_checked"),
         "doctor_check": pick("doctor_check", "decision"),
+        "treatment": pick("treatment"),
         "treatment_changed": pick("treatment_changed"),
         "memo": pick("memo", "decision_reasons"),
+
+        "uct_q1": "",
+        "uct_q2": "",
+        "uct_q3": "",
+        "uct_q4": "",
+        "uct_total": "",
+
+        "dlqi_q1": "",
+        "dlqi_q2": "",
+        "dlqi_q3": "",
+        "dlqi_q4": "",
+        "dlqi_q5": "",
+        "dlqi_q6": "",
+        "dlqi_q7": "",
+        "dlqi_q8": "",
+        "dlqi_q9": "",
+        "dlqi_q10": "",
+        "dlqi_total": "",
+
+        "visit_date": visit_date,
+        "max_score": max_score,
     }
+
+    if scale == "ADCT":
+        for i in range(1, 7):
+            payload[f"adct_q{i}"] = item_score(i)
+        payload["adct_total"] = total_score
+
+    elif scale == "UCT":
+        for i in range(1, 5):
+            payload[f"uct_q{i}"] = item_score(i)
+        payload["uct_total"] = total_score
+
+    elif scale == "DLQI":
+        for i in range(1, 11):
+            payload[f"dlqi_q{i}"] = item_score(i)
+        payload["dlqi_total"] = total_score
+
+    else:
+        print("Unknown scale:", scale)
 
     try:
         print("===== GOOGLE SHEET PAYLOAD =====")
@@ -1300,7 +1360,7 @@ def main():
     st.title(APP_TITLE)
     st.caption("DLQI for psoriasis / ADCT for atopic dermatitis / UCT for urticaria")
     st.caption(APP_VERSION)
-    st.caption("RD4 Google Sheet fixed version / ADCT score-number display / UCT original-text alignment")
+    st.caption("RD4 MASTER Sheet version / ADCT-DLQI-UCT unified payload")
 
     language = st.sidebar.radio("Language / 言語", ["日本語", "English"], index=0)
 
