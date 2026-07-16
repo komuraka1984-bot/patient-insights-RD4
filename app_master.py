@@ -10,7 +10,13 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 MASTER_REQUIRED = os.getenv("MASTER_DB_REQUIRED", "true").strip().lower() not in {"0", "false", "no"}
 
 _pro_store: ProStore | None = ProStore(DATABASE_URL) if DATABASE_URL else None
-_original_save_result = legacy.save_result
+
+# Streamlit reruns this script in the same Python process while the imported
+# legacy module can remain cached. Keep the unmodified functions once, so
+# wrappers never wrap previously wrapped functions.
+if not hasattr(legacy, "_master_original_save_result"):
+    legacy._master_original_save_result = legacy.save_result
+_original_save_result = legacy._master_original_save_result
 
 
 def _extra_value(instrument: str, name: str) -> str:
@@ -86,12 +92,23 @@ def extend_renderer(original_renderer, instrument: str):
                 else "These optional fields are stored in the extensible Master Database schema."
             )
         return result
+
+    wrapped.__name__ = f"master_extended_{instrument.lower()}"
     return wrapped
 
 
-legacy.render_adct = extend_renderer(legacy.render_adct, "ADCT")
-legacy.render_dlqi = extend_renderer(legacy.render_dlqi, "DLQI")
-legacy.render_uct = extend_renderer(legacy.render_uct, "UCT")
+def install_renderer(renderer_name: str, instrument: str) -> None:
+    """Install exactly one wrapper even after repeated Streamlit reruns."""
+    original_attr = f"_master_original_{renderer_name}"
+    if not hasattr(legacy, original_attr):
+        setattr(legacy, original_attr, getattr(legacy, renderer_name))
+    original_renderer = getattr(legacy, original_attr)
+    setattr(legacy, renderer_name, extend_renderer(original_renderer, instrument))
+
+
+install_renderer("render_adct", "ADCT")
+install_renderer("render_dlqi", "DLQI")
+install_renderer("render_uct", "UCT")
 
 
 if __name__ == "__main__":
