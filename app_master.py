@@ -18,7 +18,10 @@ def _extra_value(instrument: str, name: str) -> str:
 
 
 def save_result_with_master(row: dict) -> None:
-    """Keep the existing CSV backup and also persist to the shared Master DB."""
+    """Keep the existing CSV schema and enrich only the shared Master DB row."""
+    # Keep the local CSV byte-for-byte compatible with existing headers.
+    _original_save_result(dict(row))
+
     enriched = dict(row)
     instrument = str(enriched.get("instrument", "")).upper()
     enriched.update(
@@ -30,9 +33,6 @@ def save_result_with_master(row: dict) -> None:
             "responder_role": _extra_value(instrument, "responder_role"),
         }
     )
-
-    # Existing CSV remains as a transitional backup.
-    _original_save_result(enriched)
 
     if _pro_store is None:
         if MASTER_REQUIRED:
