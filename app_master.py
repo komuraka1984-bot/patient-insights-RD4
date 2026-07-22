@@ -24,8 +24,9 @@ def _extra_value(instrument: str, name: str) -> str:
 
 
 def save_result_with_master(row: dict) -> None:
-    """Keep the existing CSV schema and enrich only the shared Master DB row."""
+    """Save locally first, then mirror to Master DB without blocking submission."""
     # Keep the local CSV byte-for-byte compatible with existing headers.
+    # This is the primary fallback and must complete before any remote write.
     _original_save_result(dict(row))
 
     enriched = dict(row)
@@ -41,17 +42,31 @@ def save_result_with_master(row: dict) -> None:
     )
 
     if _pro_store is None:
+        message = "MASTER DB: DATABASE_URL is not set; submission kept in RD4 CSV backup"
+        print(message)
         if MASTER_REQUIRED:
-            raise RuntimeError("DATABASE_URL is not configured for RD4 Master Database.")
-        print("MASTER DB: DATABASE_URL is not set; existing backups only")
+            st.warning(
+                "回答はRD4内に保存されましたが、マスターデータベースへの転送を確認できませんでした。"
+                "管理者が接続設定を確認してください。"
+            )
         return
 
-    inserted = _pro_store.save_row(
-        enriched,
-        facility_id=legacy.SITE_ID,
-        project_id=legacy.PROJECT_ID,
-    )
-    print("MASTER DB:", "inserted" if inserted else "duplicate")
+    try:
+        inserted = _pro_store.save_row(
+            enriched,
+            facility_id=legacy.SITE_ID,
+            project_id=legacy.PROJECT_ID,
+        )
+        print("MASTER DB:", "inserted" if inserted else "duplicate")
+    except Exception as exc:
+        # A remote database problem must not make the submit button appear dead.
+        # The local CSV has already been written, and the remaining backup
+        # transfers in app.py should still be allowed to run.
+        print("MASTER DB SAVE ERROR:", repr(exc))
+        st.warning(
+            "回答はRD4内に保存されましたが、マスターデータベースへの転送で一時的な問題が発生しました。"
+            "送信処理は継続します。"
+        )
 
 
 legacy.save_result = save_result_with_master
