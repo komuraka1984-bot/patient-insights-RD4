@@ -60,8 +60,7 @@ def save_result_with_master(row: dict) -> None:
         print("MASTER DB:", "inserted" if inserted else "duplicate")
     except Exception as exc:
         # A remote database problem must not make the submit button appear dead.
-        # The local CSV has already been written, and the remaining backup
-        # transfers in app.py should still be allowed to run.
+        # The local CSV has already been written.
         print("MASTER DB SAVE ERROR:", repr(exc))
         st.warning(
             "回答はRD4内に保存されましたが、マスターデータベースへの転送で一時的な問題が発生しました。"
@@ -70,6 +69,20 @@ def save_result_with_master(row: dict) -> None:
 
 
 legacy.save_result = save_result_with_master
+
+
+# Render Master Database is now the authoritative destination for RD4.
+# The legacy Google endpoints can be slow or unavailable and previously kept
+# Streamlit waiting before it rendered the submission-complete screen. Keep
+# their call sites compatible, but return immediately so successful Render
+# storage is followed directly by the completion display.
+def skip_legacy_google_backup(row: dict) -> bool:
+    print("LEGACY GOOGLE BACKUP: skipped; Render Master Database is authoritative")
+    return True
+
+
+legacy.send_to_google_form = skip_legacy_google_backup
+legacy.send_to_google_sheet = skip_legacy_google_backup
 
 
 def extend_renderer(original_renderer, instrument: str):
