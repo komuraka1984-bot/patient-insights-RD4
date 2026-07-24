@@ -1656,7 +1656,10 @@ def main():
             row[f"q{i}_score"] = score
             row[f"q{i}_answer"] = result["answers"][i - 1]
 
+        import time
+        _save_started = time.perf_counter()
         save_result(row)
+        print(f"SAVE_RESULT_SECONDS={time.perf_counter() - _save_started:.3f}")
 
         st.session_state["saved_result"] = {
             "instrument": result["instrument"],
