@@ -1,0 +1,26 @@
+name: Add save timing instrumentation
+
+on:
+  push:
+    paths:
+      - ".github/workflows/add-save-timing.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply timing patch
+        run: python tools/add_save_timing.py
+      - name: Check syntax
+        run: python -m py_compile app.py
+      - name: Commit timing instrumentation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git commit -m "Measure RD4 save duration"
+          git push
