@@ -1614,8 +1614,6 @@ def main():
             row[f"q{i}_answer"] = result["answers"][i - 1]
 
         save_result(row)
-        send_to_google_form(row)
-        send_to_google_sheet(row)
 
         st.session_state["questionnaire_started_at"] = datetime.now(JST).isoformat()
         st.session_state["questionnaire_timer_disease_mode"] = disease_mode
