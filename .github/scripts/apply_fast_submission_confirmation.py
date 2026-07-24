@@ -1,0 +1,86 @@
+from pathlib import Path
+
+path = Path("app.py")
+text = path.read_text(encoding="utf-8")
+
+main_anchor = 'def main():\n    st.set_page_config(page_title=APP_TITLE, page_icon="📝", layout="centered")\n\n    st.title(APP_TITLE)'
+main_replacement = '''def main():
+    st.set_page_config(page_title=APP_TITLE, page_icon="📝", layout="centered")
+
+    if st.session_state.get("submission_complete"):
+        saved = st.session_state.get("saved_result", {})
+        language = saved.get("language", "日本語")
+        instrument = saved.get("instrument", "")
+        total_score = saved.get("total_score", "")
+        max_score = saved.get("max_score", "")
+
+        st.success(t(language, "送信されました。", "Submitted successfully."))
+        if instrument:
+            st.metric(
+                instrument + " " + t(language, "合計点", "total score"),
+                f"{total_score} / {max_score}",
+            )
+
+        if instrument == "ADCT":
+            decision = saved.get("decision", "")
+            previous_adct = saved.get("previous_adct")
+            delta_adct = saved.get("delta_adct")
+            st.markdown("---")
+            if decision == "維持":
+                st.markdown("<h1 style='text-align:center; color:green;'>🟢 維持</h1>", unsafe_allow_html=True)
+            else:
+                st.markdown("<h1 style='text-align:center; color:red;'>🔴 非維持</h1>", unsafe_allow_html=True)
+            if previous_adct is not None:
+                st.markdown(
+                    f"<p style='text-align:center;'>ADCT: {total_score}（前回 {previous_adct}） / Δ {delta_adct}</p>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"<p style='text-align:center;'>ADCT: {total_score}（初回）</p>",
+                    unsafe_allow_html=True,
+                )
+
+        st.info(
+            t(
+                language,
+                "入力内容は保存されました。この画面を受付または医療者にお見せください。",
+                "Your responses have been saved. Please show this screen to clinic staff.",
+            )
+        )
+        st.stop()
+
+    st.title(APP_TITLE)'''
+
+save_anchor = '''        save_result(row)
+
+        st.session_state["questionnaire_started_at"] = datetime.now(JST).isoformat()
+        st.session_state["questionnaire_timer_disease_mode"] = disease_mode
+
+        st.success(t(language, "送信されました。", "Submitted successfully."))'''
+save_replacement = '''        save_result(row)
+
+        st.session_state["saved_result"] = {
+            "instrument": result["instrument"],
+            "total_score": result["total_score"],
+            "max_score": result["max_score"],
+            "language": language,
+            "decision": decision,
+            "previous_adct": previous_adct,
+            "delta_adct": delta_adct,
+        }
+        st.session_state["submission_complete"] = True
+        st.session_state["questionnaire_started_at"] = datetime.now(JST).isoformat()
+        st.session_state["questionnaire_timer_disease_mode"] = disease_mode
+        st.rerun()
+
+        st.success(t(language, "送信されました。", "Submitted successfully."))'''
+
+if main_anchor not in text:
+    raise SystemExit("main anchor not found; no changes made")
+if save_anchor not in text:
+    raise SystemExit("save anchor not found; no changes made")
+
+text = text.replace(main_anchor, main_replacement, 1)
+text = text.replace(save_anchor, save_replacement, 1)
+path.write_text(text, encoding="utf-8")
