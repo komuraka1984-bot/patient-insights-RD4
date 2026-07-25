@@ -137,17 +137,27 @@ def canonical_row(row: Mapping[str, Any], *, facility_id: str, project_id: str) 
 
 class ProStore:
     def __init__(self, database_url: str | None = None) -> None:
+        from psycopg_pool import ConnectionPool
+
         raw = (database_url or os.getenv("DATABASE_URL", "")).strip()
         if raw.startswith("postgres://"):
             raw = "postgresql://" + raw[len("postgres://"):]
         if not raw:
             raise RuntimeError("DATABASE_URL is not configured")
+
         self.database_url = raw
+        self.pool = ConnectionPool(
+            conninfo=self.database_url,
+            min_size=1,
+            max_size=4,
+            timeout=10,
+            open=True,
+        )
+        self.pool.wait(timeout=15)
         self.ensure_schema()
 
     def _connect(self):
-        import psycopg
-        return psycopg.connect(self.database_url)
+        return self.pool.connection()
 
     def ensure_schema(self) -> None:
         statements = (
@@ -190,14 +200,17 @@ class ProStore:
 
     def save_row(self, row: Mapping[str, Any], *, facility_id: str, project_id: str) -> bool:
         from psycopg.types.json import Jsonb
+
         canonical = canonical_row(row, facility_id=facility_id, project_id=project_id)
         if not canonical["anonymous_id"] or not canonical["scale"]:
             raise ValueError("anonymous_id and scale are required")
+
         values = [canonical[column] for column in COLUMNS]
         values[COLUMNS.index("responses_json")] = Jsonb(canonical["responses_json"])
         values[COLUMNS.index("extra_json")] = Jsonb(canonical["extra_json"])
         placeholders = ", ".join(["%s"] * len(COLUMNS))
         sql = f"INSERT INTO pro_submissions ({', '.join(COLUMNS)}) VALUES ({placeholders}) ON CONFLICT (submission_id) DO NOTHING"
+
         with self._connect() as conn:
             cursor = conn.execute(sql, values)
             return cursor.rowcount == 1
