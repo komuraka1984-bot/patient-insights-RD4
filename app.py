@@ -1358,6 +1358,7 @@ def main():
     st.set_page_config(page_title=APP_TITLE, page_icon="📝", layout="centered")
 
     if st.session_state.get("submission_complete"):
+        print("SUBMIT_STAGE=completion_screen", flush=True)
         saved = st.session_state.get("saved_result", {})
         language = saved.get("language", "日本語")
         instrument = saved.get("instrument", "")
@@ -1657,9 +1658,15 @@ def main():
             row[f"q{i}_answer"] = result["answers"][i - 1]
 
         import time
+
+        print("SUBMIT_STAGE=before_save", flush=True)
         _save_started = time.perf_counter()
         save_result(row)
-        print(f"SAVE_RESULT_SECONDS={time.perf_counter() - _save_started:.3f}")
+        print(
+            f"SAVE_RESULT_SECONDS={time.perf_counter() - _save_started:.3f}",
+            flush=True,
+        )
+        print("SUBMIT_STAGE=after_save", flush=True)
 
         st.session_state["saved_result"] = {
             "instrument": result["instrument"],
@@ -1673,6 +1680,7 @@ def main():
         st.session_state["submission_complete"] = True
         st.session_state["questionnaire_started_at"] = datetime.now(JST).isoformat()
         st.session_state["questionnaire_timer_disease_mode"] = disease_mode
+        print("SUBMIT_STAGE=before_rerun", flush=True)
         st.rerun()
 
         st.success(t(language, "送信されました。", "Submitted successfully."))
