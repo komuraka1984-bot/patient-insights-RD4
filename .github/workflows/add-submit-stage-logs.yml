@@ -1,0 +1,30 @@
+name: Add submission stage logs
+
+on:
+  push:
+    paths:
+      - "tools/add_submit_stage_logs.py"
+      - ".github/workflows/add-submit-stage-logs.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch app.py
+        run: python tools/add_submit_stage_logs.py
+
+      - name: Check Python syntax
+        run: python -m py_compile app.py
+
+      - name: Commit app.py
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git commit -m "Add submission stage timing logs"
+          git push
