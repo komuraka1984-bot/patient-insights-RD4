@@ -97,8 +97,10 @@ def canonical_row(row: Mapping[str, Any], *, facility_id: str, project_id: str) 
     submitted_at = _timestamp(_pick(row, "submitted_at", "timestamp", "input_submitted_at"))
     total_score = _int(_pick(row, "total_score", "total"))
     max_score = _int(row.get("max_score")) or {"ADCT": 24, "UCT": 16, "DLQI": 30}.get(scale)
-    actual_facility = str(_pick(row, "facility_id", "site_id", default=facility_id)).strip()
-    actual_project = str(_pick(row, "project_id", default=project_id)).strip()
+    # The caller resolves facility access server-side. Never allow a submitted
+    # row to override the authenticated/validated tenant.
+    actual_facility = str(facility_id or "").strip()
+    actual_project = str(project_id or "").strip()
     fingerprint = "|".join([actual_facility, anonymous_id, scale, submitted_at, str(total_score), actual_project])
     extra = {
         str(key): value for key, value in row.items()
@@ -214,3 +216,34 @@ class ProStore:
         with self._connect() as conn:
             cursor = conn.execute(sql, values)
             return cursor.rowcount == 1
+
+    def latest_score(
+        self,
+        anonymous_id: str,
+        *,
+        facility_id: str,
+        scale: str,
+    ) -> int | None:
+        patient = _id(anonymous_id)
+        if not patient:
+            return None
+        sql = """
+            SELECT total_score
+            FROM pro_submissions
+            WHERE facility_id = %s
+              AND anonymous_id = %s
+              AND scale = %s
+              AND total_score IS NOT NULL
+            ORDER BY submitted_at DESC, submission_id DESC
+            LIMIT 1
+        """
+        with self._connect() as conn:
+            row = conn.execute(
+                sql,
+                (
+                    str(facility_id or "").strip(),
+                    patient,
+                    str(scale or "").strip().upper(),
+                ),
+            ).fetchone()
+        return int(row[0]) if row and row[0] is not None else None
