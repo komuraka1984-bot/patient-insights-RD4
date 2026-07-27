@@ -28,6 +28,13 @@ SITE_ID = os.getenv("SITE_ID", "KRCH_DERM")
 SITE_NAME = os.getenv("SITE_NAME", "Department of Dermatology, Kanazawa Red Cross Hospital")
 PROJECT_ID = os.getenv("PROJECT_ID", "RD_PRO_PILOT_2026")
 PROJECT_PHASE = os.getenv("PROJECT_PHASE", "RD")
+RESEARCH_MODE = (
+    os.getenv("RESEARCH_MODE", "true").strip().lower()
+    not in {"0", "false", "no", "off"}
+)
+EXTERNAL_FACILITY_MODE = False
+ALLOWED_SCALES = ("ADCT", "DLQI", "UCT")
+FACILITY_CONTACT = os.getenv("FACILITY_CONTACT", CONTACT_EMAIL)
 
 JST = timezone(timedelta(hours=9))
 
@@ -722,8 +729,8 @@ def render_credit_footer(language: str):
     st.caption(
         t(
             language,
-            f"{APP_VERSION} | {PROJECT_PHASE} implementation for internal pilot use. Site: {SITE_ID} / {SITE_NAME}. Contact: Kazuhiro Komura, Department of Dermatology, Kanazawa Red Cross Hospital.",
-            f"{APP_VERSION} | {PROJECT_PHASE} implementation for internal pilot use. Site: {SITE_ID} / {SITE_NAME}. Contact: Kazuhiro Komura, Department of Dermatology, Kanazawa Red Cross Hospital.",
+            f"{APP_VERSION} | {PROJECT_PHASE}. Site: {SITE_ID} / {SITE_NAME}. Contact: {FACILITY_CONTACT}.",
+            f"{APP_VERSION} | {PROJECT_PHASE}. Site: {SITE_ID} / {SITE_NAME}. Contact: {FACILITY_CONTACT}.",
         )
     )
     st.caption(
@@ -1410,23 +1417,54 @@ def main():
 
     render_legal_notice(language)
 
-    disease_param = st.query_params.get("disease", "ad")
-    disease_param = str(disease_param).lower()
-
+    disease_param = str(st.query_params.get("disease", "ad")).lower()
+    preferred_scale = "ADCT"
     if disease_param in ["psoriasis", "ps", "dlqi"]:
-        default_index = 0
+        preferred_scale = "DLQI"
     elif disease_param in ["urticaria", "uc", "uct"]:
-        default_index = 2
-    else:
-        default_index = 1
+        preferred_scale = "UCT"
 
+    mode_definitions = [
+        (
+            "DLQI",
+            t(language, "乾癬：DLQI", "Psoriasis: DLQI"),
+        ),
+        (
+            "ADCT",
+            t(
+                language,
+                "アトピー性皮膚炎：ADCT",
+                "Atopic dermatitis: ADCT",
+            ),
+        ),
+        (
+            "UCT",
+            t(language, "蕁麻疹：UCT", "Urticaria: UCT"),
+        ),
+    ]
+    available_modes = [
+        (scale, label)
+        for scale, label in mode_definitions
+        if scale in set(ALLOWED_SCALES)
+    ]
+    if not available_modes:
+        st.error(
+            t(
+                language,
+                "この施設で利用可能な質問票が設定されていません。",
+                "No questionnaire is enabled for this facility.",
+            )
+        )
+        st.stop()
+    available_scales = [scale for scale, _ in available_modes]
+    default_index = (
+        available_scales.index(preferred_scale)
+        if preferred_scale in available_scales
+        else 0
+    )
     disease_mode = st.sidebar.radio(
         t(language, "疾患・質問票", "Disease / questionnaire"),
-        [
-            t(language, "乾癬：DLQI", "Psoriasis: DLQI"),
-            t(language, "アトピー性皮膚炎：ADCT", "Atopic dermatitis: ADCT"),
-            t(language, "蕁麻疹：UCT", "Urticaria: UCT"),
-        ],
+        [label for _, label in available_modes],
         index=default_index,
     )
 
@@ -1503,7 +1541,7 @@ def main():
         else:
             result = render_adct(language)
 
-        if result["instrument"] == "ADCT":
+        if result["instrument"] == "ADCT" and RESEARCH_MODE:
             render_research_consent_notice(language)
             consent = st.checkbox(
                 t(
@@ -1648,9 +1686,21 @@ def main():
             "input_ease": result.get("input_ease", ""),
             "consent_checked": True,
             "consent_method": "in_app_checkbox_before_submission",
-            "research_consent_checked": True if result["instrument"] == "ADCT" else "",
-            "research_consent_text_version": "ADCT digital PRO feasibility consent v1.0" if result["instrument"] == "ADCT" else "",
-            "research_consent_timestamp": now if result["instrument"] == "ADCT" else "",
+            "research_consent_checked": (
+                True
+                if result["instrument"] == "ADCT" and RESEARCH_MODE
+                else ""
+            ),
+            "research_consent_text_version": (
+                "ADCT digital PRO feasibility consent v1.0"
+                if result["instrument"] == "ADCT" and RESEARCH_MODE
+                else ""
+            ),
+            "research_consent_timestamp": (
+                now
+                if result["instrument"] == "ADCT" and RESEARCH_MODE
+                else ""
+            ),
         }
 
         for i, score in enumerate(result["scores"], start=1):
@@ -1806,9 +1856,11 @@ def main():
 
     st.divider()
 
-    show_admin = st.checkbox(
-        t(language, "医療者モードを表示", "Show clinician mode")
-    )
+    show_admin = False
+    if not EXTERNAL_FACILITY_MODE:
+        show_admin = st.checkbox(
+            t(language, "医療者モードを表示", "Show clinician mode")
+        )
 
     if show_admin:
         with st.expander(

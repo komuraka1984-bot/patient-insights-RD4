@@ -6,6 +6,11 @@ import time
 import streamlit as st
 
 import app as legacy
+from facility_access import (
+    FacilityStore,
+    legacy_facility_context,
+    normalize_facility_id,
+)
 from master_store import ProStore
 
 
@@ -16,6 +21,67 @@ MASTER_REQUIRED = (
 )
 
 _pro_store: ProStore | None = ProStore(DATABASE_URL) if DATABASE_URL else None
+
+_default_site_id = legacy.SITE_ID
+_default_site_name = legacy.SITE_NAME
+_default_project_id = legacy.PROJECT_ID
+
+
+@st.cache_resource
+def get_facility_store() -> FacilityStore:
+    return FacilityStore(DATABASE_URL)
+
+
+def resolve_patient_facility():
+    facility_param = str(st.query_params.get("facility", "") or "").strip()
+    access_param = str(st.query_params.get("access", "") or "").strip()
+    if not facility_param and not access_param:
+        return legacy_facility_context(
+            facility_id=_default_site_id,
+            facility_name=_default_site_name,
+            project_id=_default_project_id,
+        )
+    if not facility_param or not access_param:
+        st.error(
+            "施設専用URLが不完全です。受付で案内されたQRコードから"
+            "もう一度アクセスしてください。"
+        )
+        st.stop()
+    try:
+        store = get_facility_store()
+        context = store.resolve_patient_access(
+            normalize_facility_id(facility_param),
+            access_param,
+        )
+    except Exception as exc:
+        print("FACILITY ENTRY ERROR:", repr(exc), flush=True)
+        context = None
+    if context is None:
+        st.error(
+            "この施設用URLは無効または停止中です。"
+            "受付で最新のQRコードをご確認ください。"
+        )
+        st.stop()
+    return context
+
+
+_facility_context = resolve_patient_facility()
+legacy.SITE_ID = _facility_context.facility_id
+legacy.SITE_NAME = _facility_context.facility_name
+legacy.PROJECT_ID = _facility_context.project_id or _default_project_id
+legacy.PROJECT_PHASE = (
+    "RESEARCH"
+    if _facility_context.usage_mode == "research"
+    else "FLOW"
+)
+legacy.RESEARCH_MODE = _facility_context.usage_mode == "research"
+legacy.EXTERNAL_FACILITY_MODE = _facility_context.external
+legacy.ALLOWED_SCALES = _facility_context.allowed_scales
+legacy.FACILITY_CONTACT = (
+    "contact@shirabeo.com"
+    if _facility_context.external
+    else legacy.FACILITY_CONTACT
+)
 
 
 # Streamlit reruns this script in the same Python process while the imported
@@ -45,17 +111,20 @@ def save_result_with_master(row: dict) -> None:
     prints separate timing values for the CSV backup and Master DB write.
     """
 
-    # Keep the local CSV byte-for-byte compatible with existing headers.
-    # This is the primary fallback and must complete before any remote write.
-    csv_started = time.perf_counter()
-
-    _original_save_result(dict(row))
-
-    csv_elapsed = time.perf_counter() - csv_started
-    print(
-        f"CSV_SAVE_SECONDS={csv_elapsed:.3f}",
-        flush=True,
-    )
+    if _facility_context.external:
+        print(
+            "CSV_SAVE_SECONDS=SKIPPED_EXTERNAL_FACILITY",
+            flush=True,
+        )
+    else:
+        # Preserve the existing Kanazawa Red Cross local fallback.
+        csv_started = time.perf_counter()
+        _original_save_result(dict(row))
+        csv_elapsed = time.perf_counter() - csv_started
+        print(
+            f"CSV_SAVE_SECONDS={csv_elapsed:.3f}",
+            flush=True,
+        )
 
     enriched = dict(row)
     instrument = str(
@@ -96,6 +165,12 @@ def save_result_with_master(row: dict) -> None:
             flush=True,
         )
 
+        if _facility_context.external:
+            st.error(
+                "マスターデータベースへ接続できないため送信を完了できません。"
+                "時間をおいて再度お試しください。"
+            )
+            st.stop()
         if MASTER_REQUIRED:
             st.warning(
                 "回答はRD4内に保存されましたが、"
@@ -139,8 +214,14 @@ def save_result_with_master(row: dict) -> None:
             flush=True,
         )
 
-        # A remote database problem must not make the submit button appear dead.
-        # The local CSV has already been written.
+        if _facility_context.external:
+            st.error(
+                "マスターデータベースへ保存できなかったため、"
+                "送信は完了していません。時間をおいて再度お試しください。"
+            )
+            st.stop()
+
+        # The Kanazawa Red Cross local CSV has already been written.
         st.warning(
             "回答はRD4内に保存されましたが、"
             "マスターデータベースへの転送で一時的な問題が発生しました。"
@@ -149,6 +230,23 @@ def save_result_with_master(row: dict) -> None:
 
 
 legacy.save_result = save_result_with_master
+
+
+if not hasattr(legacy, "_master_original_get_previous_adct"):
+    legacy._master_original_get_previous_adct = legacy.get_previous_adct
+
+
+def get_previous_adct_from_facility(patient_code: str):
+    if not _facility_context.external or _pro_store is None:
+        return legacy._master_original_get_previous_adct(patient_code)
+    return _pro_store.latest_score(
+        patient_code,
+        facility_id=legacy.SITE_ID,
+        scale="ADCT",
+    )
+
+
+legacy.get_previous_adct = get_previous_adct_from_facility
 
 
 # Render Master Database is now the authoritative destination for RD4.
@@ -170,6 +268,11 @@ legacy.send_to_google_sheet = skip_legacy_google_backup
 
 def extend_renderer(original_renderer, instrument: str):
     def wrapped(language: str):
+        if instrument not in set(_facility_context.allowed_scales):
+            st.error(
+                "この施設では、この質問票は現在有効化されていません。"
+            )
+            st.stop()
         result = original_renderer(language)
 
         title = (
