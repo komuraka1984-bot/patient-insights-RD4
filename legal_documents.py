@@ -41,7 +41,7 @@ def patient_terms_markdown(
 
 ### 2. 提供関係と利用料金
 - 本サービスは、{service_provider}が医療機関向けに提供する診療・問診支援基盤です。本画面は、{facility_name}の案内に基づいて患者さんが利用します。
-- 医療機関との契約内容により、本サービスが有償で提供される場合があります。患者さんに対する本サービス単独の利用料金の有無や診療費上の取扱いは、医療機関の案内に従ってください。
+- 本サービスは、医療機関との契約に基づいて有償で提供される場合があります。{service_provider}から患者さんへ本サービス単独の利用料金を直接請求することはありません。通常の診療費等の取扱いは、医療機関の案内に従ってください。
 
 ### 3. 利用条件
 - 医療機関から案内された施設専用URLまたはQRコードを使用し、案内された匿名コードを正確に入力してください。
@@ -82,7 +82,7 @@ Version: {PATIENT_TERMS_VERSION}
 
 ### 2. Service relationship and fees
 - {service_provider} provides this clinical and questionnaire-support platform to medical institutions. Patients use this screen as directed by {facility_name}.
-- The service may be provided to the medical institution under a paid agreement. Follow the medical institution's guidance regarding any patient charge or treatment-related fee.
+- The service may be provided to the medical institution under a paid agreement. {service_provider} does not directly charge patients a separate fee solely for use of this service. Follow the medical institution's guidance regarding ordinary clinical fees.
 
 ### 3. Conditions of use
 - Use the facility-specific URL or QR code and enter the anonymous code provided by the medical institution.
