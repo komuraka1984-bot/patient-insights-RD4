@@ -30,6 +30,7 @@ def test_japanese_terms_cover_paid_service_and_separate_research_consent():
 
     assert "弁護士レビュー用ドラフト" in terms
     assert "有償で提供される場合" in terms
+    assert "患者さんへ本サービス単独の利用料金を直接請求することはありません" in terms
     assert "研究参加への同意は別" in terms
     assert "緊急時" in terms
     assert PATIENT_TERMS_VERSION in terms
@@ -60,6 +61,7 @@ def test_english_documents_are_available():
 
     assert "Draft for legal review" in terms
     assert "paid agreement" in terms
+    assert "does not directly charge patients a separate fee" in terms
     assert "separate from consent to participate in research" in terms
     assert "international processing" in policy
     assert "not necessarily legally anonymous" in policy
