@@ -43,6 +43,10 @@ RESEARCH_MODE = (
     not in {"0", "false", "no", "off"}
 )
 EXTERNAL_FACILITY_MODE = False
+LEGAL_REVIEW_MODE = (
+    os.getenv("LEGAL_REVIEW_MODE", "false").strip().lower()
+    in {"1", "true", "yes", "on"}
+)
 ALLOWED_SCALES = ("ADCT", "DLQI", "UCT")
 FACILITY_CONTACT = os.getenv("FACILITY_CONTACT", CONTACT_EMAIL)
 SERVICE_PROVIDER_NAME = os.getenv("SERVICE_PROVIDER_NAME", "Shirabeo Labs")
@@ -1420,6 +1424,15 @@ def main():
 
     language = st.sidebar.radio("Language / 言語", ["日本語", "English"], index=0)
 
+    if LEGAL_REVIEW_MODE:
+        st.info(
+            t(
+                language,
+                "これは弁護士レビュー用の確認環境です。入力内容は送信・保存されません。",
+                "This is a legal-review environment. Entries cannot be submitted or saved.",
+            )
+        )
+
     render_legal_notice(language)
 
     disease_param = str(st.query_params.get("disease", "ad")).lower()
@@ -1583,8 +1596,17 @@ def main():
             )
 
         submitted = st.form_submit_button(
-            t(language, "送信", "Submit"),
+            t(
+                language,
+                "レビュー環境のため送信できません"
+                if LEGAL_REVIEW_MODE
+                else "送信",
+                "Submission disabled in review environment"
+                if LEGAL_REVIEW_MODE
+                else "Submit",
+            ),
             use_container_width=True,
+            disabled=LEGAL_REVIEW_MODE,
         )
 
     if submitted:
