@@ -10,6 +10,16 @@ import pandas as pd
 import streamlit as st
 import requests
 
+from legal_documents import (
+    LEGAL_DOCUMENT_STATUS_EN,
+    LEGAL_DOCUMENT_STATUS_JA,
+    PATIENT_TERMS_VERSION,
+    PRIVACY_POLICY_VERSION,
+    build_service_consent_record,
+    patient_terms_markdown,
+    privacy_policy_markdown,
+)
+
 
 APP_TITLE = "Shirabeo Labs | Patient Insight"
 
@@ -20,7 +30,7 @@ CSV_PATH_UCT = Path("data/rd_uct_responses.csv")
 ADMIN_EMAIL = "komura@shirabeo.com"
 CONTACT_EMAIL = "contact@shirabeo.com"
 
-APP_VERSION = "Patient Insight Demo v0.9.4"
+APP_VERSION = "Patient Insight v0.10.0"
 
 # Facility / project classification
 # These can be overridden in Render Environment for each deployed site.
@@ -35,6 +45,11 @@ RESEARCH_MODE = (
 EXTERNAL_FACILITY_MODE = False
 ALLOWED_SCALES = ("ADCT", "DLQI", "UCT")
 FACILITY_CONTACT = os.getenv("FACILITY_CONTACT", CONTACT_EMAIL)
+SERVICE_PROVIDER_NAME = os.getenv("SERVICE_PROVIDER_NAME", "Shirabeo Labs")
+DATA_HOSTING_REGION = os.getenv(
+    "DATA_HOSTING_REGION",
+    "Oregon, United States",
+)
 
 JST = timezone(timedelta(hours=9))
 
@@ -629,72 +644,62 @@ def send_admin_email(row: dict, result: dict) -> tuple[bool, str]:
 
 
 def render_legal_notice(language: str):
+    service_description_ja = (
+        "研究・試験運用中の診療支援ツール"
+        if RESEARCH_MODE
+        else "医療機関向けに提供される診療・問診支援サービス"
+    )
+    service_description_en = (
+        "a clinical-support tool in research or pilot operation"
+        if RESEARCH_MODE
+        else "a clinical and questionnaire-support service provided to medical institutions"
+    )
     st.warning(
         t(
             language,
-            "本アプリは、皮膚科診療における問診・患者報告アウトカムの整理を補助するためのデモ／試験運用版です。診断、治療方針、薬剤選択、治療継続・中止を自動的に決定するものではありません。最終的な診療判断は、必ず医師その他の資格を有する医療者が行ってください。",
-            "This application is a demonstration / pilot tool intended to support questionnaire collection and organization of patient-reported outcomes in dermatology practice. It does not provide diagnosis, determine treatment plans, select medications, or automatically decide whether treatment should be continued or stopped. Final clinical decisions must always be made by a qualified healthcare professional.",
+            f"本アプリは、{service_description_ja}です。診断、治療方針、薬剤選択、治療継続・中止を自動的に決定するものではありません。最終的な診療判断は、必ず医師その他の資格を有する医療者が行ってください。緊急時には使用せず、医療機関へ直接連絡してください。",
+            f"This application is {service_description_en}. It does not provide diagnosis, determine treatment plans, select medications, or automatically decide whether treatment should be continued or stopped. Final clinical decisions must always be made by a qualified healthcare professional. Do not use it for emergencies; contact the medical institution directly.",
         )
     )
 
-    with st.expander(t(language, "利用上の注意・法務表示（詳細）", "Important notices and legal information")):
+    st.caption(
+        t(
+            language,
+            f"{LEGAL_DOCUMENT_STATUS_JA}：患者向け利用規約 {PATIENT_TERMS_VERSION}／プライバシーポリシー {PRIVACY_POLICY_VERSION}",
+            f"{LEGAL_DOCUMENT_STATUS_EN}: Patient Terms {PATIENT_TERMS_VERSION} / Privacy Policy {PRIVACY_POLICY_VERSION}",
+        )
+    )
+
+    with st.expander(
+        t(
+            language,
+            "患者向け利用規約（ドラフト）を確認",
+            "Review the Patient Terms (draft)",
+        )
+    ):
         st.markdown(
-            t(
+            patient_terms_markdown(
                 language,
-                f"""
-### 1. 本アプリの位置づけ
-- 本アプリは、皮膚科診療における患者報告アウトカム（PRO）の入力、スコア整理、経時的な情報把握を補助するための試験運用版です。
-- 本アプリは、医療者による問診・診察・検査・診療記録の確認を置き換えるものではありません。
-- 本アプリの表示結果は、医療者による確認を促すための参考情報であり、単独で診断、重症度判定、治療方針、薬剤選択、治療継続・変更・中止を決定するものではありません。
-- 本アプリは、現時点では研究・試験運用・診療補助目的のワークフロー支援ツールであり、医療機器としての承認・認証・届出を受けたものではありません。
+                service_provider=SERVICE_PROVIDER_NAME,
+                facility_name=SITE_NAME,
+                contact_email=FACILITY_CONTACT,
+            )
+        )
 
-### 2. 利用対象
-- 本アプリは、医療機関または医療者の管理下で、皮膚科診療の補助として使用されることを想定しています。
-- 患者さんが単独で診断や治療判断を行う目的で使用するものではありません。
-
-### 3. 入力してはいけない情報
-- 氏名、生年月日、住所、電話番号、メールアドレス、患者ID、診察券番号、保険証番号、マイナンバーなど、個人を直接特定できる情報は入力しないでください。
-- 匿名コードを使用する場合は、医療機関内で適切に管理された非識別コードを使用してください。
-- 匿名コード欄や自由記載欄に、個人を特定できる内容を入力しないでください。
-
-### 4. データの取扱い
-- 入力された回答、スコア、匿名コード、送信日時、選択された疾患・質問票の種類などは、診療補助、試験運用、動作確認、品質改善、集計確認の目的で保存・確認される場合があります。
-- 医療機関が匿名コードと患者情報を対応させる場合、その対応表は医療機関側で適切に管理してください。
-
-### 5. 質問票・第三者権利
-- ADCT、DLQI、UCT等の質問票、名称、設問文、翻訳、スコア体系、解釈基準には、第三者の著作権、商標権、ライセンス条件、使用条件が存在する場合があります。
-- 実運用、商用利用、外部提供、研究利用、出版物・講演資料での表示、企業・医療機関への提供にあたっては、必要な使用許諾、表示条件、ライセンス、引用条件を確認してください。
-
-### 6. お問い合わせ
-- 本アプリに関するお問い合わせ：{CONTACT_EMAIL}
-                """,
-                f"""
-### 1. Positioning of this application
-- This application is a pilot / demonstration tool intended to support the input, scoring, and longitudinal review of patient-reported outcomes in dermatology practice.
-- It does not replace medical interviews, physical examination, tests, or review of medical records by healthcare professionals.
-- The displayed results are reference information to support review by healthcare professionals and must not be used alone to diagnose disease, determine severity, select medications, or decide whether treatment should be continued, changed, or stopped.
-- This application is currently a workflow-support tool for research, pilot use, and clinical support. It has not been approved, certified, or registered as a medical device.
-
-### 2. Intended users and use setting
-- This application is intended to be used as a dermatology workflow-support tool under the management of a medical institution or healthcare professional.
-- It is not intended for patients to independently diagnose disease or make treatment decisions.
-
-### 3. Information not to enter
-- Do not enter directly identifiable information such as name, date of birth, address, phone number, email address, patient ID, medical record number, insurance number, or government identification number.
-- If an anonymous code is used, it should be a non-identifying code appropriately managed within the medical institution.
-- Do not enter any personally identifiable content in the anonymous code field or any free-text field.
-
-### 4. Handling of data
-- Responses, scores, anonymous codes, submission time, selected disease, and questionnaire type may be stored and reviewed for clinical support, pilot operation, technical verification, quality improvement, and aggregate review.
-- If a medical institution links anonymous codes with patient identities, the correspondence table should be managed appropriately by the medical institution.
-
-### 5. Questionnaires and third-party rights
-- ADCT, DLQI, UCT, questionnaire names, question wording, translations, scoring systems, and interpretation criteria may be subject to third-party copyrights, trademarks, licenses, or usage conditions.
-- Before operational, commercial, external, research, publication, presentation, or institutional use, necessary permissions, display requirements, licenses, and citation conditions should be confirmed.
-
-### 6. Contact
-- Contact regarding this application: {CONTACT_EMAIL}
-                """,
+    with st.expander(
+        t(
+            language,
+            "プライバシーポリシー（ドラフト）を確認",
+            "Review the Privacy Policy (draft)",
+        )
+    ):
+        st.markdown(
+            privacy_policy_markdown(
+                language,
+                service_provider=SERVICE_PROVIDER_NAME,
+                facility_name=SITE_NAME,
+                contact_email=FACILITY_CONTACT,
+                hosting_region=DATA_HOSTING_REGION,
             )
         )
 
@@ -736,8 +741,8 @@ def render_credit_footer(language: str):
     st.caption(
         t(
             language,
-            "本アプリは診療補助・問診支援を目的とした試験運用版であり、診断・治療方針・薬剤選択・治療継続または中止を自動決定するものではありません。最終的な診療判断は医療者が行ってください。",
-            "This application is a pilot clinical-support and questionnaire-support tool. It does not automatically determine diagnosis, treatment plans, medication selection, or treatment continuation/discontinuation. Final clinical decisions should be made by a qualified healthcare professional.",
+            "本アプリは診療補助・問診支援を目的とし、診断・治療方針・薬剤選択・治療継続または中止を自動決定するものではありません。最終的な診療判断は医療者が行ってください。",
+            "This application supports clinical workflows and questionnaires. It does not automatically determine diagnosis, treatment plans, medication selection, or treatment continuation/discontinuation. Final clinical decisions should be made by a qualified healthcare professional.",
         )
     )
 
@@ -1541,24 +1546,40 @@ def main():
         else:
             result = render_adct(language)
 
+        st.markdown("---")
+        st.markdown(
+            t(
+                language,
+                "**サービス利用に関する同意（必須）**",
+                "**Service agreement (required)**",
+            )
+        )
+        st.caption(
+            t(
+                language,
+                f"画面上部の患者向け利用規約（{PATIENT_TERMS_VERSION}）とプライバシーポリシー（{PRIVACY_POLICY_VERSION}）をご確認ください。",
+                f"Please review the Patient Terms ({PATIENT_TERMS_VERSION}) and Privacy Policy ({PRIVACY_POLICY_VERSION}) displayed above.",
+            )
+        )
+        terms_consent = st.checkbox(
+            t(
+                language,
+                "患者向け利用規約およびプライバシーポリシーを確認し、同意します。",
+                "I have reviewed and agree to the Patient Terms and Privacy Policy.",
+            ),
+            key=f"terms_consent_{language}_{result['instrument']}",
+        )
+
+        research_consent = False
         if result["instrument"] == "ADCT" and RESEARCH_MODE:
             render_research_consent_notice(language)
-            consent = st.checkbox(
+            research_consent = st.checkbox(
                 t(
                     language,
                     "上記の説明を確認し、本研究への参加に同意します。",
                     "I have reviewed the explanation above and agree to participate in this research study.",
                 ),
                 key=f"research_consent_{language}_{result['instrument']}",
-            )
-        else:
-            consent = st.checkbox(
-                t(
-                    language,
-                    "上記の注意事項を確認しました。直接個人情報を入力せず、本アプリの結果が診断・治療方針を自動決定するものではないことを理解しました。",
-                    "I have reviewed the notices above. I understand that I should not enter direct personal identifiers and that this app does not automatically determine diagnosis or treatment.",
-                ),
-                key=f"general_consent_{language}_{result['instrument']}",
             )
 
         submitted = st.form_submit_button(
@@ -1567,12 +1588,26 @@ def main():
         )
 
     if submitted:
-        if not consent:
+        if not terms_consent:
             st.error(
                 t(
                     language,
-                    "送信するには、研究参加に関する説明または利用上の注意を確認し、チェックボックスにチェックしてください。",
-                    "To submit, please review the research participation explanation or notices and check the confirmation box.",
+                    "送信するには、患者向け利用規約とプライバシーポリシーを確認し、サービス利用に関する同意欄にチェックしてください。",
+                    "To submit, please review the Patient Terms and Privacy Policy and check the service agreement box.",
+                )
+            )
+            st.stop()
+
+        if (
+            result["instrument"] == "ADCT"
+            and RESEARCH_MODE
+            and not research_consent
+        ):
+            st.error(
+                t(
+                    language,
+                    "この研究用入力を送信するには、研究参加に関する説明を確認し、研究同意欄にチェックしてください。研究参加を希望しない場合は、担当医療者へお申し出ください。",
+                    "To submit this research entry, please review the research explanation and check the research-consent box. If you do not wish to participate, please tell your healthcare professional.",
                 )
             )
             st.stop()
@@ -1684,8 +1719,7 @@ def main():
             "input_duration_minutes": input_duration_minutes,
             "input_support": result.get("input_support", ""),
             "input_ease": result.get("input_ease", ""),
-            "consent_checked": True,
-            "consent_method": "in_app_checkbox_before_submission",
+            **build_service_consent_record(now),
             "research_consent_checked": (
                 True
                 if result["instrument"] == "ADCT" and RESEARCH_MODE
