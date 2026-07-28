@@ -54,6 +54,8 @@ DATA_HOSTING_REGION = os.getenv(
     "DATA_HOSTING_REGION",
     "Oregon, United States",
 )
+if LEGAL_REVIEW_MODE:
+    SITE_NAME = "導入医療機関（レビュー表示）"
 
 JST = timezone(timedelta(hours=9))
 
