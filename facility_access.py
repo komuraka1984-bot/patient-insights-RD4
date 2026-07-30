@@ -621,6 +621,31 @@ class FacilityStore:
             return None
         return self._context_from_row(row, authenticated=False)
 
+    def resolve_patient_access_token(
+        self,
+        token: str,
+    ) -> FacilityContext | None:
+        """Resolve a facility only from its opaque patient access token."""
+        supplied = str(token or "").strip()
+        if not supplied:
+            return None
+        p = self._placeholder
+        sql = (
+            "SELECT * FROM facilities "
+            f"WHERE patient_access_token_hash = {p} "
+            f"AND status = {p} AND access_enabled = {p} "
+            "LIMIT 1"
+        )
+        enabled = True if self.backend == "postgres" else 1
+        with self._connect() as conn:
+            row = conn.execute(
+                sql,
+                (hash_access_token(supplied), "active", enabled),
+            ).fetchone()
+        if not row:
+            return None
+        return self._context_from_row(row, authenticated=False)
+
     def rotate_password(self, facility_id: str) -> str:
         normalized = validate_facility_id(facility_id)
         password = generate_staff_password()
