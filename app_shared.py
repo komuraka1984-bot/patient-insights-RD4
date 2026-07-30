@@ -8,7 +8,11 @@ import streamlit as st
 
 import app_master as base
 import app as legacy
-from deployment_context import log_save_result, prepare_master_record
+from deployment_context import (
+    DeploymentContext,
+    log_save_result,
+    prepare_master_record,
+)
 from facility_access import FacilityStore
 
 
@@ -55,6 +59,12 @@ legacy.EXTERNAL_FACILITY_MODE = True
 legacy.ALLOWED_SCALES = _facility_context.allowed_scales
 legacy.FACILITY_CONTACT = "contact@shirabeo.com"
 
+_save_context = DeploymentContext(
+    site_id=_facility_context.facility_id,
+    site_name=_facility_context.facility_name,
+    project_id=_facility_context.project_id,
+)
+
 
 def save_result_with_shared_context(row: dict) -> None:
     """Persist only with the facility context resolved from the access token."""
@@ -79,7 +89,7 @@ def save_result_with_shared_context(row: dict) -> None:
     if base._pro_store is None:
         log_save_result(
             enriched,
-            None,
+            _save_context,
             save_result="rejected_master_db_unavailable",
         )
         st.error(
@@ -92,7 +102,7 @@ def save_result_with_shared_context(row: dict) -> None:
     try:
         # Final save-time overwrite. The user, browser, URL, and submitted row
         # have no path to override these values.
-        enriched = prepare_master_record(enriched, _facility_context)
+        enriched = prepare_master_record(enriched, _save_context)
         inserted = base._pro_store.save_row(
             enriched,
             facility_id=_facility_context.facility_id,
@@ -104,7 +114,7 @@ def save_result_with_shared_context(row: dict) -> None:
         )
         log_save_result(
             enriched,
-            _facility_context,
+            _save_context,
             save_result="inserted" if inserted else "duplicate",
         )
     except Exception as exc:
@@ -113,7 +123,7 @@ def save_result_with_shared_context(row: dict) -> None:
             flush=True,
         )
         print("MASTER DB SAVE ERROR:", repr(exc), flush=True)
-        log_save_result(enriched, _facility_context, save_result="error")
+        log_save_result(enriched, _save_context, save_result="error")
         st.error(
             "マスターデータベースへ保存できなかったため、"
             "送信は完了していません。時間をおいて再度お試しください。"
