@@ -160,3 +160,24 @@ def test_stripe_ready_fields_and_event_idempotency(tmp_path: Path):
         event_type="customer.subscription.updated",
         facility_id="BILLING_A",
     )
+
+def test_shared_patient_token_resolves_without_facility_id(
+    tmp_path: Path,
+):
+    store = FacilityStore(sqlite_path=tmp_path / "facility.sqlite3")
+    issued = store.create_facility(
+        facility_name="Clinic Komura",
+        facility_id="CLINIC_KOMURA",
+    )
+
+    context = store.resolve_patient_access_token(
+        issued.patient_access_token,
+    )
+
+    assert context is not None
+    assert context.facility_id == "CLINIC_KOMURA"
+    assert (
+        store.resolve_patient_access_token("not-a-valid-token")
+        is None
+    )
+\n
