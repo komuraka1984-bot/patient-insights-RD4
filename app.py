@@ -24,9 +24,11 @@ APP_VERSION = "Patient Insight Demo v0.9.4"
 
 # Facility / project classification
 # These can be overridden in Render Environment for each deployed site.
-SITE_ID = os.getenv("SITE_ID", "KRCH_DERM")
-SITE_NAME = os.getenv("SITE_NAME", "Department of Dermatology, Kanazawa Red Cross Hospital")
-PROJECT_ID = os.getenv("PROJECT_ID", "RD_PRO_PILOT_2026")
+# The RD4 entry point validates these server-only values before saving.
+# There is deliberately no default/fallback facility ID.
+SITE_ID = os.getenv("SITE_ID", "").strip().upper()
+SITE_NAME = os.getenv("SITE_NAME", "").strip()
+PROJECT_ID = os.getenv("PROJECT_ID", "").strip()
 PROJECT_PHASE = os.getenv("PROJECT_PHASE", "RD")
 RESEARCH_MODE = (
     os.getenv("RESEARCH_MODE", "true").strip().lower()
