@@ -644,7 +644,7 @@ class FacilityStore:
             ).fetchone()
         if not row:
             return None
-        return self._context_from_row(row, authenticated=False)
+        return self._context_from_row(dict(row), authenticated=False)
 
     def rotate_password(self, facility_id: str) -> str:
         normalized = validate_facility_id(facility_id)
