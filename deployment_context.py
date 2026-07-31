@@ -19,6 +19,16 @@ class DeploymentContext:
     project_id: str
 
 
+@dataclass(frozen=True)
+class RequestContext:
+    """Server-resolved tenant settings for one patient browser session."""
+
+    deployment: DeploymentContext
+    allowed_scales: tuple[str, ...]
+    external: bool
+    research_mode: bool
+
+
 def resolve_deployment_context(environ: Mapping[str, str]) -> DeploymentContext:
     """Require a valid server-side facility identity before any save."""
     site_id = str(environ.get("SITE_ID", "")).strip().upper()
@@ -34,6 +44,70 @@ def resolve_deployment_context(environ: Mapping[str, str]) -> DeploymentContext:
         site_id=site_id,
         site_name=site_name,
         project_id=project_id,
+    )
+
+
+def resolve_request_context(
+    default_context: DeploymentContext,
+    *,
+    facility_store: Any,
+    access_token: object = "",
+    requested_facility_id: object = "",
+    default_allowed_scales: tuple[str, ...] = ("ADCT", "DLQI", "UCT"),
+    default_research_mode: bool = True,
+) -> RequestContext:
+    """
+    Resolve an external tenant only from a valid opaque patient token.
+
+    The optional facility query parameter is a consistency check, never the
+    source of tenant identity. A supplied but invalid token fails closed rather
+    than falling back to the default deployment.
+    """
+    token = str(access_token or "").strip()
+    if not token:
+        requested_id = str(requested_facility_id or "").strip().upper()
+        if requested_id and requested_id != default_context.site_id:
+            raise RuntimeError(
+                "external facility access requires a valid patient token"
+            )
+        return RequestContext(
+            deployment=default_context,
+            allowed_scales=tuple(default_allowed_scales),
+            external=False,
+            research_mode=bool(default_research_mode),
+        )
+
+    if facility_store is None:
+        raise RuntimeError(
+            "patient access cannot be validated without the facility store"
+        )
+
+    facility = facility_store.resolve_patient_access_token(token)
+    if facility is None:
+        raise RuntimeError("patient access token is invalid or disabled")
+
+    resolved_id = str(facility.facility_id or "").strip().upper()
+    requested_id = str(requested_facility_id or "").strip().upper()
+    if requested_id and requested_id != resolved_id:
+        raise RuntimeError(
+            "patient access token does not match the requested facility"
+        )
+
+    deployment = DeploymentContext(
+        site_id=resolved_id,
+        site_name=str(facility.facility_name or "").strip(),
+        project_id=str(facility.project_id or "").strip(),
+    )
+    if not SITE_ID_PATTERN.fullmatch(deployment.site_id):
+        raise RuntimeError("resolved facility ID is invalid")
+    if not deployment.site_name or not deployment.project_id:
+        raise RuntimeError("resolved facility configuration is incomplete")
+
+    return RequestContext(
+        deployment=deployment,
+        allowed_scales=tuple(facility.allowed_scales),
+        external=True,
+        research_mode=str(facility.usage_mode or "").strip() == "research",
     )
 
 
