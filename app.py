@@ -41,6 +41,45 @@ FACILITY_CONTACT = os.getenv("FACILITY_CONTACT", CONTACT_EMAIL)
 JST = timezone(timedelta(hours=9))
 
 
+def active_site_id() -> str:
+    return str(st.session_state.get("_rd4_site_id") or SITE_ID).strip().upper()
+
+
+def active_site_name() -> str:
+    return str(st.session_state.get("_rd4_site_name") or SITE_NAME).strip()
+
+
+def active_project_id() -> str:
+    return str(
+        st.session_state.get("_rd4_project_id") or PROJECT_ID
+    ).strip()
+
+
+def active_allowed_scales() -> tuple[str, ...]:
+    values = st.session_state.get("_rd4_allowed_scales")
+    if isinstance(values, (list, tuple)):
+        return tuple(str(value).strip().upper() for value in values)
+    return tuple(ALLOWED_SCALES)
+
+
+def active_external_facility_mode() -> bool:
+    return bool(
+        st.session_state.get(
+            "_rd4_external_facility_mode",
+            EXTERNAL_FACILITY_MODE,
+        )
+    )
+
+
+def active_research_mode() -> bool:
+    return bool(
+        st.session_state.get(
+            "_rd4_research_mode",
+            RESEARCH_MODE,
+        )
+    )
+
+
 def send_to_google_form(row):
     url = "https://docs.google.com/forms/d/e/1FAIpQLScC3M0830zqkGnnNsD8D_lOFoRwzyqFrd0ljMP6tAB530Jp1w/formResponse"
 
@@ -104,7 +143,11 @@ def send_to_google_sheet(row):
     payload = {
         "timestamp": timestamp,
         "anonymous_id": pick("anonymous_id", "visit_code"),
-        "facility_id": pick("facility_id", "site_id", default=SITE_ID),
+        "facility_id": pick(
+            "facility_id",
+            "site_id",
+            default=active_site_id(),
+        ),
         "disease": pick("disease"),
         "scale": scale,
 
@@ -731,8 +774,8 @@ def render_credit_footer(language: str):
     st.caption(
         t(
             language,
-            f"{APP_VERSION} | {PROJECT_PHASE}. Site: {SITE_ID} / {SITE_NAME}. Contact: {FACILITY_CONTACT}.",
-            f"{APP_VERSION} | {PROJECT_PHASE}. Site: {SITE_ID} / {SITE_NAME}. Contact: {FACILITY_CONTACT}.",
+            f"{APP_VERSION} | {PROJECT_PHASE}. Site: {active_site_id()} / {active_site_name()}. Contact: {FACILITY_CONTACT}.",
+            f"{APP_VERSION} | {PROJECT_PHASE}. Site: {active_site_id()} / {active_site_name()}. Contact: {FACILITY_CONTACT}.",
         )
     )
     st.caption(
@@ -1447,7 +1490,7 @@ def main():
     available_modes = [
         (scale, label)
         for scale, label in mode_definitions
-        if scale in set(ALLOWED_SCALES)
+        if scale in set(active_allowed_scales())
     ]
     if not available_modes:
         st.error(
@@ -1543,7 +1586,7 @@ def main():
         else:
             result = render_adct(language)
 
-        if result["instrument"] == "ADCT" and RESEARCH_MODE:
+        if result["instrument"] == "ADCT" and active_research_mode():
             render_research_consent_notice(language)
             consent = st.checkbox(
                 t(
@@ -1665,9 +1708,9 @@ def main():
         row = {
             "timestamp": now,
             "app_version": APP_VERSION,
-            "site_id": SITE_ID,
-            "site_name": SITE_NAME,
-            "project_id": PROJECT_ID,
+            "site_id": active_site_id(),
+            "site_name": active_site_name(),
+            "project_id": active_project_id(),
             "project_phase": PROJECT_PHASE,
             "language": language,
             "disease": result["disease"],
@@ -1690,17 +1733,17 @@ def main():
             "consent_method": "in_app_checkbox_before_submission",
             "research_consent_checked": (
                 True
-                if result["instrument"] == "ADCT" and RESEARCH_MODE
+                if result["instrument"] == "ADCT" and active_research_mode()
                 else ""
             ),
             "research_consent_text_version": (
                 "ADCT digital PRO feasibility consent v1.0"
-                if result["instrument"] == "ADCT" and RESEARCH_MODE
+                if result["instrument"] == "ADCT" and active_research_mode()
                 else ""
             ),
             "research_consent_timestamp": (
                 now
-                if result["instrument"] == "ADCT" and RESEARCH_MODE
+                if result["instrument"] == "ADCT" and active_research_mode()
                 else ""
             ),
         }
@@ -1859,7 +1902,7 @@ def main():
     st.divider()
 
     show_admin = False
-    if not EXTERNAL_FACILITY_MODE:
+    if not active_external_facility_mode():
         show_admin = st.checkbox(
             t(language, "医療者モードを表示", "Show clinician mode")
         )
