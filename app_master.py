@@ -8,10 +8,13 @@ import streamlit as st
 import app as legacy
 from deployment_context import (
     DeploymentContext,
+    RequestContext,
     log_save_result,
     prepare_master_record,
     resolve_deployment_context,
+    resolve_request_context,
 )
+from facility_access import FacilityStore
 from master_store import ProStore
 
 
@@ -22,6 +25,9 @@ MASTER_REQUIRED = (
 )
 
 _pro_store: ProStore | None = ProStore(DATABASE_URL) if DATABASE_URL else None
+_facility_store: FacilityStore | None = (
+    FacilityStore(DATABASE_URL) if DATABASE_URL else None
+)
 
 try:
     _deployment_context: DeploymentContext = resolve_deployment_context(
@@ -37,9 +43,37 @@ except RuntimeError as exc:
     print(f"RD4 DEPLOYMENT CONFIG ERROR: {exc}", flush=True)
     st.stop()
 
-legacy.SITE_ID = _deployment_context.site_id
-legacy.SITE_NAME = _deployment_context.site_name
-legacy.PROJECT_ID = _deployment_context.project_id
+try:
+    _request_context: RequestContext = resolve_request_context(
+        _deployment_context,
+        facility_store=_facility_store,
+        access_token=st.query_params.get("access", ""),
+        requested_facility_id=st.query_params.get("facility", ""),
+        default_allowed_scales=tuple(legacy.ALLOWED_SCALES),
+        default_research_mode=bool(legacy.RESEARCH_MODE),
+    )
+except RuntimeError as exc:
+    st.error(
+        "この患者用URLは無効、期限切れ、または施設情報と一致しません。"
+        "施設から案内された最新のQRコードをご利用ください。"
+    )
+    print(f"RD4 PATIENT ACCESS ERROR: {exc}", flush=True)
+    st.stop()
+
+st.session_state["_rd4_request_context"] = _request_context
+st.session_state["_rd4_site_id"] = _request_context.deployment.site_id
+st.session_state["_rd4_site_name"] = _request_context.deployment.site_name
+st.session_state["_rd4_project_id"] = _request_context.deployment.project_id
+st.session_state["_rd4_allowed_scales"] = _request_context.allowed_scales
+st.session_state["_rd4_external_facility_mode"] = _request_context.external
+st.session_state["_rd4_research_mode"] = _request_context.research_mode
+
+
+def _current_deployment_context() -> DeploymentContext:
+    current = st.session_state.get("_rd4_request_context")
+    if not isinstance(current, RequestContext):
+        raise RuntimeError("patient request context is unavailable")
+    return current.deployment
 
 
 # Streamlit reruns this script in the same Python process while the imported
@@ -62,9 +96,20 @@ def _extra_value(instrument: str, name: str) -> str:
 
 
 def save_result_with_master(row: dict) -> None:
-    """Save under the fixed, server-side deployment facility identity."""
+    """Save under the server-validated facility identity for this session."""
     enriched = dict(row)
     instrument = str(enriched.get("instrument", "")).upper()
+    request_context = st.session_state.get("_rd4_request_context")
+    if not isinstance(request_context, RequestContext):
+        st.error(
+            "施設情報を確認できないため送信できません。"
+            "QRコードからもう一度開いてください。"
+        )
+        st.stop()
+    if instrument not in set(request_context.allowed_scales):
+        st.error("この施設では選択した質問票を利用できません。")
+        st.stop()
+    active_context = request_context.deployment
     enriched.update(
         {
             "source_app": "RD4",
@@ -84,7 +129,7 @@ def save_result_with_master(row: dict) -> None:
     if _pro_store is None:
         log_save_result(
             enriched,
-            _deployment_context,
+            active_context,
             save_result="rejected_master_db_unavailable",
         )
         st.error(
@@ -95,13 +140,13 @@ def save_result_with_master(row: dict) -> None:
 
     db_started = time.perf_counter()
     try:
-        # Final mutation before persistence: a submitted facility_id/site_id/
-        # project_id can never override this deployment's server-side values.
-        enriched = prepare_master_record(enriched, _deployment_context)
+        # Final mutation before persistence: submitted tenant fields can never
+        # override the server-validated token/deployment context.
+        enriched = prepare_master_record(enriched, active_context)
         inserted = _pro_store.save_row(
             enriched,
-            facility_id=_deployment_context.site_id,
-            project_id=_deployment_context.project_id,
+            facility_id=active_context.site_id,
+            project_id=active_context.project_id,
         )
         print(
             f"MASTER_DB_SECONDS={time.perf_counter() - db_started:.3f}",
@@ -109,7 +154,7 @@ def save_result_with_master(row: dict) -> None:
         )
         log_save_result(
             enriched,
-            _deployment_context,
+            active_context,
             save_result="inserted" if inserted else "duplicate",
         )
     except Exception as exc:
@@ -118,7 +163,7 @@ def save_result_with_master(row: dict) -> None:
             flush=True,
         )
         print("MASTER DB SAVE ERROR:", repr(exc), flush=True)
-        log_save_result(enriched, _deployment_context, save_result="error")
+        log_save_result(enriched, active_context, save_result="error")
         st.error(
             "マスターデータベースへ保存できなかったため、"
             "送信は完了していません。時間をおいて再度お試しください。"
@@ -135,9 +180,10 @@ if not hasattr(legacy, "_master_original_get_previous_adct"):
 def get_previous_adct_from_facility(patient_code: str):
     if _pro_store is None:
         return legacy._master_original_get_previous_adct(patient_code)
+    active_context = _current_deployment_context()
     return _pro_store.latest_score(
         patient_code,
-        facility_id=_deployment_context.site_id,
+        facility_id=active_context.site_id,
         scale="ADCT",
     )
 

@@ -180,4 +180,3 @@ def test_shared_patient_token_resolves_without_facility_id(
         store.resolve_patient_access_token("not-a-valid-token")
         is None
     )
-\n
