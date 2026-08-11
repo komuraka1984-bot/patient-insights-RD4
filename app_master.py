@@ -23,6 +23,10 @@ MASTER_REQUIRED = (
     os.getenv("MASTER_DB_REQUIRED", "true").strip().lower()
     not in {"0", "false", "no"}
 )
+ALLOW_EXTERNAL_FACILITY_ACCESS = (
+    os.getenv("ALLOW_EXTERNAL_FACILITY_ACCESS", "true").strip().lower()
+    not in {"0", "false", "no", "off"}
+)
 
 _pro_store: ProStore | None = ProStore(DATABASE_URL) if DATABASE_URL else None
 _facility_store: FacilityStore | None = (
@@ -49,6 +53,7 @@ try:
         facility_store=_facility_store,
         access_token=st.query_params.get("access", ""),
         requested_facility_id=st.query_params.get("facility", ""),
+        allow_external_facility_access=ALLOW_EXTERNAL_FACILITY_ACCESS,
         default_allowed_scales=tuple(legacy.ALLOWED_SCALES),
         default_research_mode=bool(legacy.RESEARCH_MODE),
     )

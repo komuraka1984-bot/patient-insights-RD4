@@ -1,5 +1,18 @@
 # patient-insights-RD2
 
+## Dedicated entrances
+
+The production Blueprint exposes two independent patient entrances backed by
+the same RD7 Master Database:
+
+- KRCH: `SITE_ID=KRCH_DERM`
+- Conference demo: `SITE_ID=CONFERENCE_DEMO`
+
+Both deployments set `ALLOW_EXTERNAL_FACILITY_ACCESS=false`. Their server-side
+facility identity therefore cannot be changed with `facility` or `access` URL
+parameters, and every saved record is overwritten with the entrance's trusted
+facility and project IDs immediately before persistence.
+
 ## Facility-specific patient entry
 
 The existing Kanazawa Red Cross Hospital entrance continues to use the Render `SITE_ID=KRCH_DERM` setting.
