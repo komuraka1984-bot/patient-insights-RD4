@@ -91,6 +91,26 @@ def test_invalid_patient_token_never_falls_back_to_krch():
         )
 
 
+def test_dedicated_krch_entrance_rejects_external_token_routing():
+    with pytest.raises(RuntimeError, match="dedicated entrance"):
+        resolve_request_context(
+            deployment("KRCH_DERM"),
+            facility_store=FacilityStore(),
+            access_token="valid-opaque-token",
+            allow_external_facility_access=False,
+        )
+
+
+def test_dedicated_conference_entrance_keeps_server_facility():
+    context = resolve_request_context(
+        deployment("CONFERENCE_DEMO"),
+        facility_store=FacilityStore(),
+        allow_external_facility_access=False,
+    )
+    assert context.deployment.site_id == "CONFERENCE_DEMO"
+    assert context.external is False
+
+
 def test_facility_hint_must_match_token_resolved_facility():
     with pytest.raises(RuntimeError, match="does not match"):
         resolve_request_context(

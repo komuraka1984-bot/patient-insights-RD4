@@ -53,6 +53,7 @@ def resolve_request_context(
     facility_store: Any,
     access_token: object = "",
     requested_facility_id: object = "",
+    allow_external_facility_access: bool = True,
     default_allowed_scales: tuple[str, ...] = ("ADCT", "DLQI", "UCT"),
     default_research_mode: bool = True,
 ) -> RequestContext:
@@ -75,6 +76,11 @@ def resolve_request_context(
             allowed_scales=tuple(default_allowed_scales),
             external=False,
             research_mode=bool(default_research_mode),
+        )
+
+    if not allow_external_facility_access:
+        raise RuntimeError(
+            "external facility access is disabled for this dedicated entrance"
         )
 
     if facility_store is None:
