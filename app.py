@@ -1507,11 +1507,18 @@ def main():
         if preferred_scale in available_scales
         else 0
     )
-    disease_mode = st.sidebar.radio(
-        t(language, "疾患・質問票", "Disease / questionnaire"),
-        [label for _, label in available_modes],
-        index=default_index,
-    )
+    if len(available_modes) == 1:
+        disease_mode = available_modes[0][1]
+        st.sidebar.markdown(
+            f"**{t(language, '疾患・質問票', 'Disease / questionnaire')}**"
+        )
+        st.sidebar.info(disease_mode)
+    else:
+        disease_mode = st.sidebar.radio(
+            t(language, "疾患・質問票", "Disease / questionnaire"),
+            [label for _, label in available_modes],
+            index=default_index,
+        )
 
     st.info(
         t(
@@ -1541,6 +1548,7 @@ def main():
                 f"Anonymous code ({code_prefix} + 3 digits)",
             ),
             max_chars=3,
+            value=str(st.session_state.get("_rd4_prefill_anonymous_code", "")),
             placeholder=t(language, "例：001", "Example: 001"),
             help=t(
                 language,
