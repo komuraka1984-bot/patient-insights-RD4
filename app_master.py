@@ -6,6 +6,12 @@ import time
 import streamlit as st
 
 import app as legacy
+from conference_demo import (
+    allowed_scales as conference_allowed_scales,
+    anonymous_code_digits,
+    is_conference_demo,
+    uc001_history_rows,
+)
 from deployment_context import (
     DeploymentContext,
     RequestContext,
@@ -48,13 +54,17 @@ except RuntimeError as exc:
     st.stop()
 
 try:
+    _conference_demo = is_conference_demo(_deployment_context.site_id)
     _request_context: RequestContext = resolve_request_context(
         _deployment_context,
         facility_store=_facility_store,
         access_token=st.query_params.get("access", ""),
         requested_facility_id=st.query_params.get("facility", ""),
         allow_external_facility_access=ALLOW_EXTERNAL_FACILITY_ACCESS,
-        default_allowed_scales=tuple(legacy.ALLOWED_SCALES),
+        default_allowed_scales=conference_allowed_scales(
+            _deployment_context.site_id,
+            tuple(legacy.ALLOWED_SCALES),
+        ),
         default_research_mode=bool(legacy.RESEARCH_MODE),
     )
 except RuntimeError as exc:
@@ -72,6 +82,29 @@ st.session_state["_rd4_project_id"] = _request_context.deployment.project_id
 st.session_state["_rd4_allowed_scales"] = _request_context.allowed_scales
 st.session_state["_rd4_external_facility_mode"] = _request_context.external
 st.session_state["_rd4_research_mode"] = _request_context.research_mode
+if _conference_demo:
+    st.session_state["_rd4_prefill_anonymous_code"] = anonymous_code_digits(
+        _deployment_context.site_id
+    )
+
+
+def _ensure_conference_demo_history() -> None:
+    """Create stable, idempotent UCT history only for the conference tenant."""
+    if not _conference_demo or _pro_store is None:
+        return
+
+    for row in uc001_history_rows():
+        try:
+            _pro_store.save_row(
+                row,
+                facility_id=_deployment_context.site_id,
+                project_id=_deployment_context.project_id,
+            )
+        except Exception as exc:
+            print("CONFERENCE DEMO SEED ERROR:", repr(exc), flush=True)
+
+
+_ensure_conference_demo_history()
 
 
 def _current_deployment_context() -> DeploymentContext:
